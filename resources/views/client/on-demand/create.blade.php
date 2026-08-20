@@ -1,0 +1,18 @@
+@extends('layouts.app')
+@section('title', 'Chamba ahora | Chambapp')
+@section('content')
+<section class="form-page"><div class="container container--narrow">
+    <a class="text-link" href="{{ route('client.dashboard') }}"><i class="bi bi-arrow-left"></i> Volver</a>
+    <div class="page-heading mt-3"><p class="eyebrow">Servicio inmediato</p><h1 class="page-title">¿Qué necesitas resolver ahora?</h1><p class="text-muted">Encontraremos profesionales disponibles cerca de ti. La dirección exacta se protege hasta el pago.</p></div>
+    @if ($errors->any())<x-ui.alert variant="danger">{{ $errors->first() }}</x-ui.alert>@endif
+    <x-ui.card padding="lg"><form method="POST" action="{{ route('client.ondemand.store') }}" enctype="multipart/form-data" data-geolocation-form>@csrf
+        <div class="mb-3"><label class="form-label" for="category_id">Categoría</label><select class="form-select" id="category_id" name="category_id" required><option value="">Selecciona una categoría</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>{{ $category->name }}</option>@endforeach</select></div>
+        <div class="mb-3"><label class="form-label" for="title">Título breve</label><input class="form-control" id="title" name="title" maxlength="160" value="{{ old('title') }}" placeholder="Ej. Fuga de agua en la cocina" required></div>
+        <div class="mb-3"><label class="form-label" for="description">¿Qué pasó?</label><textarea class="form-control" id="description" name="description" rows="4" maxlength="1200" required>{{ old('description') }}</textarea></div>
+        <input type="hidden" name="latitude" data-latitude value="{{ old('latitude') }}"><input type="hidden" name="longitude" data-longitude value="{{ old('longitude') }}">
+        <div class="on-demand-location mb-3"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2"><div><h2 class="h6 mb-1">Ubicación</h2><p class="small text-muted mb-0" data-geolocation-status>Comparte tu ubicación para encontrar ayuda cerca.</p></div><button class="ui-button ui-button--outline ui-button--sm" type="button" data-geolocate><i class="bi bi-crosshair"></i> Usar mi ubicación</button></div><div class="row g-2 mt-2"><div class="col-12"><label class="form-label" for="address">Dirección o referencia</label><input class="form-control" id="address" name="address" maxlength="255" value="{{ old('address') }}" placeholder="Calle, número y referencia"></div><div class="col-6"><label class="form-label" for="city">Ciudad</label><input class="form-control" id="city" name="city" maxlength="100" value="{{ old('city') }}" required></div><div class="col-6"><label class="form-label" for="state">Estado</label><input class="form-control" id="state" name="state" maxlength="100" value="{{ old('state') }}" required></div><div class="col-6"><label class="form-label" for="postal_code">C.P.</label><input class="form-control" id="postal_code" name="postal_code" maxlength="10" value="{{ old('postal_code') }}"></div></div></div>
+        <div class="mb-4"><label class="form-label" for="photos">Fotos opcionales (máximo 3)</label><input class="form-control" id="photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="form-text">No incluyas teléfonos, correos ni datos sensibles.</div></div>
+        <div class="d-flex flex-column flex-sm-row gap-2"><x-ui.button type="submit"><i class="bi bi-search"></i> Buscar profesional ahora</x-ui.button><x-ui.button href="{{ route('client.scheduled.create') }}" variant="outline">Programar para después</x-ui.button></div>
+    </form></x-ui.card>
+</div></section>
+@endsection

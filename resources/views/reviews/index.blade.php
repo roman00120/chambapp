@@ -1,0 +1,7 @@
+@extends('layouts.public')
+
+@section('title', 'Reseñas de '.$profile->user->name.' | Chambapp')
+
+@section('content')
+    <section class="marketplace-page review-page"><div class="container"><a class="text-link justify-content-start mb-3" href="{{ route('professional.public-profile', $profile) }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al perfil</a><p class="eyebrow mb-2">Reputación profesional</p><h1 class="page-title">Reseñas de {{ $profile->user->name }}</h1><p class="section-copy">{{ $profile->total_reviews }} reseñas verificadas de trabajos completados.</p><div class="row g-4 mt-1"><div class="col-12 col-lg-8"><div class="review-list">@forelse ($reviews as $review)<x-review-card :review="$review" :reportable="true" />@empty<x-ui.empty-state icon="bi-star" title="Este profesional todavía no tiene reseñas." description="Las opiniones aparecerán después de trabajos completados en Chambapp." />@endforelse</div>@if ($reviews->hasPages())<div class="mt-4"><x-pagination :paginator="$reviews" /></div>@endif</div><div class="col-12 col-lg-4"><x-ui.card padding="lg"><span class="profile-rating-summary__value">{{ $profile->total_reviews > 0 ? number_format((float) $profile->average_rating, 1).' ★' : 'Sin reseñas' }}</span><span class="profile-rating-summary__label">{{ $profile->total_reviews }} reseñas · {{ $profile->total_completed_jobs }} trabajos completados</span></x-ui.card></div></div></div></section>
+@endsection

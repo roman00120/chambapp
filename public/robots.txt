@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /cliente/
+Disallow: /profesional/
+Disallow: /admin/
+Disallow: /trabajos/
+Disallow: /cotizaciones/
+Disallow: /pagos/
+Disallow: /notificaciones/
+Disallow: /verificar-email/
+
+Sitemap: /sitemap.xml

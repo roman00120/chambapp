@@ -1,0 +1,180 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\AvailabilityStatus;
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
+use App\Enums\VerificationStatus;
+use Database\Factories\ProfessionalProfileFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+
+class ProfessionalProfile extends Model
+{
+    /** @use HasFactory<ProfessionalProfileFactory> */
+    use HasFactory;
+
+    protected $hidden = [
+        'mercadopago_access_token', 'mercadopago_refresh_token',
+    ];
+
+    protected $fillable = [
+        'user_id', 'bio', 'experience_years', 'city', 'state', 'postal_code',
+        'latitude', 'longitude', 'verification_status', 'profile_photo',
+        'average_rating', 'total_reviews', 'total_completed_jobs',
+        'verified_by', 'verified_at', 'verification_rejection_reason',
+        'is_available', 'availability_status', 'last_latitude', 'last_longitude',
+        'location_updated_at', 'service_radius_km',
+        'mercadopago_user_id', 'mercadopago_access_token', 'mercadopago_refresh_token',
+        'mercadopago_public_key', 'mercadopago_token_expires_at', 'mercadopago_connected_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'experience_years' => 'integer',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+            'verification_status' => VerificationStatus::class,
+            'is_available' => 'boolean',
+            'availability_status' => AvailabilityStatus::class,
+            'last_latitude' => 'decimal:7',
+            'last_longitude' => 'decimal:7',
+            'location_updated_at' => 'datetime',
+            'service_radius_km' => 'integer',
+            'average_rating' => 'decimal:2',
+            'total_reviews' => 'integer',
+            'total_completed_jobs' => 'integer',
+            'verified_at' => 'datetime',
+            'mercadopago_access_token' => 'encrypted',
+            'mercadopago_refresh_token' => 'encrypted',
+            'mercadopago_token_expires_at' => 'datetime',
+            'mercadopago_connected_at' => 'datetime',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function services(): HasMany
+    {
+        return $this->hasMany(Service::class, 'professional_id');
+    }
+
+    public function jobQuotes(): HasMany
+    {
+        return $this->hasMany(JobQuote::class, 'professional_id');
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(JobInvitation::class, 'professional_id');
+    }
+
+    public function isLocationFresh(): bool
+    {
+        return $this->location_updated_at?->gte(now()->subMinutes((int) config('chambapp.on_demand.location_freshness_minutes', 30))) ?? false;
+    }
+
+    public function canReceiveImmediateJobs(): bool
+    {
+        return $this->is_available
+            && $this->availability_status === AvailabilityStatus::AVAILABLE
+            && $this->isLocationFresh();
+    }
+
+    public function completionPercentage(): int
+    {
+        $fields = [
+            filled($this->bio),
+            $this->experience_years > 0,
+            filled($this->city),
+            filled($this->state),
+            filled($this->user?->phone),
+        ];
+
+        return (int) round((count(array_filter($fields)) / count($fields)) * 100);
+    }
+
+    public function isComplete(): bool
+    {
+        return $this->completionPercentage() === 100;
+    }
+
+    public function isMercadoPagoConnected(): bool
+    {
+        return filled($this->mercadopago_user_id)
+            && filled($this->mercadopago_access_token)
+            && ($this->mercadopago_token_expires_at === null
+                || $this->mercadopago_token_expires_at->isFuture()
+                || filled($this->mercadopago_refresh_token));
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return $this->verification_status === VerificationStatus::VERIFIED
+            && $this->user?->status === UserStatus::ACTIVE
+            && $this->user?->role === UserRole::PROFESSIONAL;
+    }
+
+    public function verificationLabel(): string
+    {
+        return match ($this->verification_status) {
+            VerificationStatus::PENDING => 'Verificación pendiente',
+            VerificationStatus::VERIFIED => 'Verificado',
+            VerificationStatus::REJECTED => 'Verificación rechazada',
+            default => 'No verificado',
+        };
+    }
+
+    public function verificationBadgeVariant(): string
+    {
+        return match ($this->verification_status) {
+            VerificationStatus::PENDING => 'pending',
+            VerificationStatus::VERIFIED => 'verified',
+            VerificationStatus::REJECTED => 'danger',
+            default => 'neutral',
+        };
+    }
+
+    public function jobRequests(): HasMany
+    {
+        return $this->hasMany(JobRequest::class, 'professional_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'professional_id');
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class, 'professional_id');
+    }
+
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'professional_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'professional_id');
+    }
+
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
+    }
+}

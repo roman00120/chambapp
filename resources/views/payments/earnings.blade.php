@@ -1,0 +1,7 @@
+@extends('layouts.app')
+
+@section('title', 'Ganancias | Chambapp')
+
+@section('content')
+    <section class="payment-page"><div class="container"><div class="page-heading"><div><p class="eyebrow mb-2"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Pagos aprobados</p><h1 class="page-title">Ganancias</h1><p class="section-copy mb-0">Resumen de importes correspondientes a trabajos con pago aprobado.</p></div></div><div class="payment-history-list mt-4">@forelse ($payments as $payment)<article class="payment-history-card payment-history-card--earnings"><div><p class="job-card__eyebrow">{{ $payment->jobRequest?->service?->title ?? 'Trabajo' }}</p><h2 class="h5 mb-1">{{ $payment->jobRequest?->title }}</h2><p class="small text-muted mb-0">{{ $payment->paid_at?->locale('es')->translatedFormat('d M Y') }}</p></div><div class="payment-earning-breakdown"><span>Precio <strong>${{ $payment->gross_amount }}</strong></span><span>Comisión Chambapp ({{ $payment->platform_fee_percent }}%) <strong>-${{ $payment->platform_fee }}</strong></span><span class="payment-earning-total">Monto profesional <strong>${{ $payment->professional_amount }}</strong></span></div></article>@empty<x-ui.empty-state icon="bi-graph-up-arrow" title="Aún no hay ganancias" description="Los pagos aprobados aparecerán aquí." />@endforelse</div>@if ($payments->hasPages())<div class="mt-4"><x-pagination :paginator="$payments" /></div>@endif</div></section>
+@endsection
