@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="@yield('meta_description', 'Tu espacio seguro en Chambapp.')">
     <meta name="robots" content="noindex,nofollow">
-    <meta name="theme-color" content="#f28c28">
+    <meta name="theme-color" content="#071735">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="icon" href="{{ asset('images/pwa/icon-192.png') }}" sizes="192x192" type="image/png">
     <link rel="apple-touch-icon" href="{{ asset('images/pwa/icon-192.png') }}">

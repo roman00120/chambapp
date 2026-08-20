@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="@yield('meta_description', 'Chambapp conecta a clientes con profesionales de confianza.')">
     <meta name="robots" content="@yield('robots', 'index,follow')">
-    <meta name="theme-color" content="#f28c28">
+    <meta name="theme-color" content="#071735">
     <link rel="canonical" href="{{ url()->current() }}">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="icon" href="{{ asset('images/pwa/icon-192.png') }}" sizes="192x192" type="image/png">

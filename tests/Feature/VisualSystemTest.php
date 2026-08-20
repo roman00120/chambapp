@@ -15,7 +15,7 @@ class VisualSystemTest extends TestCase
         $this->get(route('home'))
             ->assertOk()
             ->assertViewIs('welcome')
-            ->assertSee('¿Qué servicio')
+            ->assertSee('¿Qué necesitas?')
             ->assertSee('categorias')
             ->assertSee('profesionales')
             ->assertSee('servicios')

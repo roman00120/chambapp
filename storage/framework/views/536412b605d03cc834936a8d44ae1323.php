@@ -190,4 +190,4 @@
 <?php endif; ?>
 </body>
 </html>
-<?php /**PATH C:\Users\USER\Desktop\chambapp\resources\views\layouts\app.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\USER\Desktop\chambapp\resources\views/layouts/app.blade.php ENDPATH**/ ?>

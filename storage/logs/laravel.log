@@ -1870,3 +1870,5 @@
 [2026-08-19 18:40:41] testing.WARNING: Mercado Pago webhook signature rejected {"event_id":"event-invalid","data_id":"mp-3"} 
 [2026-08-19 18:42:19] testing.WARNING: Mercado Pago webhook signature rejected {"event_id":"event-invalid","data_id":"mp-3"} 
 [2026-08-19 18:43:41] testing.WARNING: Mercado Pago webhook signature rejected {"event_id":"event-invalid","data_id":"mp-3"} 
+[2026-08-19 18:57:47] testing.WARNING: Mercado Pago webhook signature rejected {"event_id":"event-invalid","data_id":"mp-3"} 
+[2026-08-19 18:59:26] testing.WARNING: Mercado Pago webhook signature rejected {"event_id":"event-invalid","data_id":"mp-3"} 

@@ -19,7 +19,7 @@ class ExampleTest extends TestCase
         $response->assertOk()
             ->assertViewIs('welcome')
             ->assertSee('Chambapp')
-            ->assertSee('Explorar servicios')
+            ->assertSee('Buscar profesionales')
             ->assertSee('width=device-width, initial-scale=1')
             ->assertSee('images/chambapp-logo.jpeg');
     }
