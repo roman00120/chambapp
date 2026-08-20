@@ -1,23 +1,23 @@
 :root {
-    --chambapp-primary: #246b4d;
-    --chambapp-primary-strong: #164832;
-    --chambapp-secondary: #d9f26d;
-    --chambapp-success: #247a55;
-    --chambapp-danger: #b74444;
-    --chambapp-warning: #9a6818;
+    --chambapp-primary: #e87818;
+    --chambapp-primary-strong: #bd4f0b;
+    --chambapp-secondary: #ffd58d;
+    --chambapp-success: #2d8a62;
+    --chambapp-danger: #c94d45;
+    --chambapp-warning: #a96b16;
     --chambapp-info: #326b85;
     --chambapp-admin: #5c4b23;
-    --chambapp-avatar-muted: #b7c3b8;
-    --chambapp-avatar-warm: #d5a47a;
-    --chambapp-background: #f5f6ef;
+    --chambapp-avatar-muted: #c8d0c9;
+    --chambapp-avatar-warm: #f0aa70;
+    --chambapp-background: #fff8f1;
     --chambapp-surface: #ffffff;
-    --chambapp-text: #18251f;
-    --chambapp-muted-text: #6e7a73;
-    --chambapp-border: #dfe5dc;
+    --chambapp-text: #24332e;
+    --chambapp-muted-text: #69766f;
+    --chambapp-border: #eadfd3;
     --chambapp-radius-sm: .5rem;
     --chambapp-radius-md: .75rem;
     --chambapp-radius-lg: 1.25rem;
-    --chambapp-shadow-sm: 0 .4rem 1.2rem rgba(24, 37, 31, .06);
-    --chambapp-shadow-md: 0 1rem 2rem rgba(24, 37, 31, .08);
+    --chambapp-shadow-sm: 0 .5rem 1.4rem rgba(70, 46, 28, .07);
+    --chambapp-shadow-md: 0 1.2rem 2.5rem rgba(70, 46, 28, .12);
     --chambapp-touch: 3rem;
 }
