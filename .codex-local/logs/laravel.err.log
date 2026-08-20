@@ -1,0 +1,60 @@
+[Wed Aug 19 20:59:10 2026] PHP 8.3.8 Development Server (http://127.0.0.1:8000) started
+[Wed Aug 19 20:59:23 2026] 127.0.0.1:50097 Accepted
+[Wed Aug 19 20:59:23 2026] 127.0.0.1:50097 Closing
+[Wed Aug 19 20:59:32 2026] 127.0.0.1:50099 Accepted
+[Wed Aug 19 20:59:32 2026] 127.0.0.1:50099 Closing
+[Wed Aug 19 20:59:48 2026] 127.0.0.1:50110 Accepted
+[Wed Aug 19 20:59:48 2026] 127.0.0.1:50111 Accepted
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50110 Closing
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50114 Accepted
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50115 Accepted
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50111 [200]: GET /images/chambapp-logo.jpeg
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50114 [200]: GET /images/hero-professional.png
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50115 [200]: GET /manifest.webmanifest
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50111 Closing
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50115 Closing
+[Wed Aug 19 20:59:49 2026] 127.0.0.1:50114 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50119 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50120 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50120 [200]: GET /images/pwa/icon-192.png
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50119 [200]: GET /sw.js
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50120 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50119 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50121 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50121 [200]: GET /images/pwa/icon-192.png
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50121 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50122 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50122 [200]: GET /offline.html
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50123 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50124 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50123 [200]: GET /manifest.webmanifest
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50124 [200]: GET /images/pwa/icon-192.png
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50122 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50123 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50124 Closing
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50125 Accepted
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50125 [200]: GET /images/pwa/icon-512.png
+[Wed Aug 19 20:59:50 2026] 127.0.0.1:50125 Closing
+[Wed Aug 19 21:00:11 2026] 127.0.0.1:50136 Accepted
+[Wed Aug 19 21:00:12 2026] 127.0.0.1:50137 Accepted
+[Wed Aug 19 21:00:12 2026] 127.0.0.1:50136 Closing
+[Wed Aug 19 21:00:12 2026] 127.0.0.1:50137 [200]: GET /images/chambapp-logo.jpeg
+[Wed Aug 19 21:00:12 2026] 127.0.0.1:50137 Closing
+[Wed Aug 19 21:00:14 2026] 127.0.0.1:50145 Accepted
+[Wed Aug 19 21:00:14 2026] 127.0.0.1:50145 [200]: GET /sw.js
+[Wed Aug 19 21:00:14 2026] 127.0.0.1:50145 Closing
+[Wed Aug 19 21:00:29 2026] 127.0.0.1:50148 Accepted
+[Wed Aug 19 21:00:29 2026] 127.0.0.1:50149 Accepted
+[Wed Aug 19 21:00:32 2026] 127.0.0.1:50149 Closing
+[Wed Aug 19 21:00:35 2026] 127.0.0.1:50148 [200]: GET /sw.js
+[Wed Aug 19 21:00:35 2026] 127.0.0.1:50148 Closing
+[Wed Aug 19 21:00:38 2026] 127.0.0.1:50154 Accepted
+[Wed Aug 19 21:00:38 2026] 127.0.0.1:50155 Accepted
+[Wed Aug 19 21:00:39 2026] 127.0.0.1:50154 Closing
+[Wed Aug 19 21:00:40 2026] 127.0.0.1:50155 [200]: GET /sw.js
+[Wed Aug 19 21:00:40 2026] 127.0.0.1:50155 Closing
+[Wed Aug 19 21:01:12 2026] 127.0.0.1:50169 Accepted
+[Wed Aug 19 21:01:12 2026] 127.0.0.1:50170 Accepted
+[Wed Aug 19 21:01:16 2026] 127.0.0.1:50169 Closing
+[Wed Aug 19 21:01:19 2026] 127.0.0.1:50170 [200]: GET /sw.js
+[Wed Aug 19 21:01:19 2026] 127.0.0.1:50170 Closing

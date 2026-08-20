@@ -27,11 +27,12 @@
     23 => 'Illuminate\\View\\ViewServiceProvider',
     24 => 'Laravel\\Pail\\PailServiceProvider',
     25 => 'Laravel\\Pao\\Laravel\\ServiceProvider',
-    26 => 'Laravel\\Tinker\\TinkerServiceProvider',
-    27 => 'Carbon\\Laravel\\ServiceProvider',
-    28 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
-    29 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    30 => 'App\\Providers\\AppServiceProvider',
+    26 => 'Laravel\\Socialite\\SocialiteServiceProvider',
+    27 => 'Laravel\\Tinker\\TinkerServiceProvider',
+    28 => 'Carbon\\Laravel\\ServiceProvider',
+    29 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
+    30 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    31 => 'App\\Providers\\AppServiceProvider',
   ),
   'eager' => 
   array (
@@ -214,6 +215,7 @@
     'validator' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'validation.presence' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'Illuminate\\Contracts\\Validation\\UncompromisedVerifier' => 'Illuminate\\Validation\\ValidationServiceProvider',
+    'Laravel\\Socialite\\Contracts\\Factory' => 'Laravel\\Socialite\\SocialiteServiceProvider',
     'command.tinker' => 'Laravel\\Tinker\\TinkerServiceProvider',
   ),
   'when' => 
@@ -258,6 +260,9 @@
     array (
     ),
     'Illuminate\\Validation\\ValidationServiceProvider' => 
+    array (
+    ),
+    'Laravel\\Socialite\\SocialiteServiceProvider' => 
     array (
     ),
     'Laravel\\Tinker\\TinkerServiceProvider' => 

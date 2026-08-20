@@ -1,0 +1,7 @@
+[Thu Aug 20 02:59:23 2026] 127.0.0.1:50097 [GET] URI: /
+[Thu Aug 20 02:59:32 2026] 127.0.0.1:50099 [GET] URI: /
+[Thu Aug 20 02:59:48 2026] 127.0.0.1:50110 [GET] URI: /
+[Thu Aug 20 03:00:12 2026] 127.0.0.1:50136 [GET] URI: /privacidad
+[Thu Aug 20 03:00:29 2026] 127.0.0.1:50149 [GET] URI: /categorias
+[Thu Aug 20 03:00:38 2026] 127.0.0.1:50154 [GET] URI: /registro
+[Thu Aug 20 03:01:12 2026] 127.0.0.1:50169 [GET] URI: /buscar
