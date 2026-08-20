@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateAvailabilityRequest;
 use App\Http\Requests\UpdateProfessionalLocationRequest;
 use App\Models\JobInvitation;
 use App\Services\OnDemandMatchingService;
+use App\Services\ProfessionalAvailabilityService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -57,20 +58,16 @@ class ProfessionalOpportunityController extends Controller
         return back()->with('status', 'Invitación declinada.');
     }
 
-    public function availability(UpdateAvailabilityRequest $request): RedirectResponse
+    public function availability(UpdateAvailabilityRequest $request, ProfessionalAvailabilityService $availability): RedirectResponse
     {
         $profile = $request->user()->professionalProfile;
-        $data = $request->validated();
-        $updates = ['is_available' => (bool) $data['is_available'], 'service_radius_km' => $data['service_radius_km']];
-        if (isset($data['latitude'], $data['longitude'])) {
-            $updates += ['last_latitude' => $data['latitude'], 'last_longitude' => $data['longitude'], 'location_updated_at' => now()];
+        try {
+            $updated = $availability->update($profile, $request->validated());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['availability' => $exception->getMessage()]);
         }
-        if ($updates['is_available'] && (! $profile?->last_latitude && ! isset($updates['last_latitude']))) {
-            return back()->withErrors(['availability' => 'Comparte tu ubicación antes de activar disponibilidad.']);
-        }
-        $profile?->forceFill($updates)->save();
 
-        return back()->with('status', $updates['is_available'] ? 'Disponibilidad activada.' : 'Disponibilidad pausada.');
+        return back()->with('status', $updated->is_available ? 'Disponibilidad activada.' : 'Disponibilidad pausada.');
     }
 
     public function location(UpdateProfessionalLocationRequest $request): RedirectResponse

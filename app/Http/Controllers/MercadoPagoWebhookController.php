@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payment;
 use App\Models\CommerceOrder;
+use App\Models\Payment;
 use App\Models\ProfessionalProfile;
+use App\Services\CommerceService;
 use App\Services\MercadoPagoService;
 use App\Services\MercadoPagoWebhookSignature;
-use App\Services\PaymentService;
-use App\Services\CommerceService;
 use App\Services\PaymentCalculationService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -57,6 +57,7 @@ class MercadoPagoWebhookController extends Controller
             if (strtolower((string) data_get($providerData, 'status')) === 'approved') {
                 $commerce->applyPaidOrder($commerceOrder);
             }
+
             return response()->json(['received' => true]);
         }
         if (! $professional) {

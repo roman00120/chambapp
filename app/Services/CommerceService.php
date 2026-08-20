@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\MercadoPagoException;
 use App\Models\CommerceOrder;
 use App\Models\ProfessionalProfile;
 use App\Models\Service;

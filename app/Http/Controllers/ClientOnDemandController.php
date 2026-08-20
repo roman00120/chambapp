@@ -2,19 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\JobStatus;
-use App\Enums\ServiceMode;
 use App\Http\Requests\StoreImmediateJobRequestRequest;
 use App\Http\Requests\StoreScheduledJobRequestRequest;
 use App\Models\Category;
 use App\Models\JobRequest;
-use App\Models\Service;
+use App\Services\JobRequestService;
 use App\Services\OnDemandMatchingService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ClientOnDemandController extends Controller
@@ -26,30 +23,9 @@ class ClientOnDemandController extends Controller
         ]);
     }
 
-    public function store(StoreImmediateJobRequestRequest $request, OnDemandMatchingService $matching): RedirectResponse
+    public function store(StoreImmediateJobRequestRequest $request, JobRequestService $jobs): RedirectResponse
     {
-        $data = $request->validated();
-        $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
-        $paths = collect($request->file('photos', []))->map(fn ($photo) => Storage::disk('local')->putFile('on-demand/'.$request->user()->getKey(), $photo))->values()->all();
-        $job = JobRequest::query()->create([
-            'client_id' => $request->user()->getKey(),
-            'professional_id' => null,
-            'service_id' => $service?->getKey(),
-            'category_id' => $data['category_id'],
-            'service_mode' => ServiceMode::IMMEDIATE,
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'address' => $data['address'] ?? null,
-            'city' => $data['city'] ?? null,
-            'state' => $data['state'] ?? null,
-            'postal_code' => $data['postal_code'] ?? null,
-            'latitude' => $data['latitude'] ?? null,
-            'longitude' => $data['longitude'] ?? null,
-            'requested_date' => now(),
-            'status' => JobStatus::SEARCHING,
-            'photo_paths' => $paths ?: null,
-        ]);
-        $matching->startSearch($job);
+        $job = $jobs->createImmediate($request->user(), $request->validated(), $request->file('photos', []));
 
         return redirect()->route('client.ondemand.show', $job)->with('status', 'Estamos buscando profesionales cerca de ti.');
     }
@@ -61,22 +37,9 @@ class ClientOnDemandController extends Controller
         ]);
     }
 
-    public function scheduledStore(StoreScheduledJobRequestRequest $request): RedirectResponse
+    public function scheduledStore(StoreScheduledJobRequestRequest $request, JobRequestService $jobs): RedirectResponse
     {
-        $data = $request->validated();
-        $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
-        $job = JobRequest::query()->create([
-            'client_id' => $request->user()->getKey(),
-            'service_id' => $service?->getKey(),
-            'category_id' => $data['category_id'],
-            'service_mode' => ServiceMode::from($data['service_mode'] ?? 'scheduled'),
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'address' => $data['address'], 'city' => $data['city'], 'state' => $data['state'], 'postal_code' => $data['postal_code'],
-            'latitude' => $data['latitude'] ?? null, 'longitude' => $data['longitude'] ?? null,
-            'requested_date' => $data['scheduled_for'], 'scheduled_for' => $data['scheduled_for'], 'scheduled_slot' => $data['scheduled_slot'],
-            'status' => JobStatus::PENDING,
-        ]);
+        $job = $jobs->createScheduled($request->user(), $request->validated());
 
         return redirect()->route('job-requests.show', $job)->with('status', 'Solicitud programada correctamente.');
     }
@@ -133,10 +96,5 @@ class ClientOnDemandController extends Controller
         }
 
         return redirect()->route('client.ondemand.show', $jobRequest)->with('status', 'Reiniciamos la búsqueda.');
-    }
-
-    private function safeService(?int $serviceId, int $categoryId): ?Service
-    {
-        return $serviceId ? Service::query()->active()->where('category_id', $categoryId)->find($serviceId) : null;
     }
 }

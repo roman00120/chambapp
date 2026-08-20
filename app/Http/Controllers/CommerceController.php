@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CommerceOrder;
+use App\Exceptions\MercadoPagoException;
 use App\Models\Service;
 use App\Services\CommerceService;
-use App\Exceptions\MercadoPagoException;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +28,7 @@ class CommerceController extends Controller
         $data = $request->validate(['days' => ['required', 'integer', 'in:1,7,30']]);
         try {
             $order = $commerce->createFeaturedOrder($request->user()->professionalProfile, $service, (int) $data['days']);
+
             return redirect()->away($commerce->checkout($order)->checkout_url);
         } catch (MercadoPagoException|DomainException $exception) {
             return back()->withErrors(['commerce' => $exception->getMessage()]);
@@ -47,6 +47,7 @@ class CommerceController extends Controller
     {
         try {
             $order = $commerce->createCustomizationOrder($request->user()->professionalProfile, $item);
+
             return redirect()->away($commerce->checkout($order)->checkout_url);
         } catch (MercadoPagoException|DomainException $exception) {
             return back()->withErrors(['commerce' => $exception->getMessage()]);

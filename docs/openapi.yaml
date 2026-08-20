@@ -1,0 +1,593 @@
+openapi: 3.0.3
+info:
+  title: Chambapp REST API
+  version: 1.0.0
+  description: API v1 para clientes móviles. La web Blade continúa usando sesiones y comparte el mismo dominio Laravel.
+  license:
+    name: Proprietary
+servers:
+  - url: https://chambapp.mx/api/v1
+    description: Producción
+  - url: http://127.0.0.1:8000/api/v1
+    description: Desarrollo local
+tags:
+  - {name: Auth, description: 'Registro, login y gestión de tokens'}
+  - {name: Public, description: Catálogo público seguro}
+  - {name: Favorites, description: Favoritos del cliente}
+  - {name: Professional, description: Perfil y operación profesional}
+  - {name: Jobs, description: 'Solicitudes, matching y workflow'}
+  - {name: Payments, description: Checkout y consulta de pagos}
+  - {name: Notifications, description: Notificaciones del usuario}
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [Public]
+      summary: Estado mínimo de la API
+      security: []
+      responses:
+        '200': {description: API disponible}
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar cliente o profesional
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RegisterInput'}
+      responses:
+        '201': {description: Cuenta y token creados}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Crear token para un dispositivo
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LoginInput'}
+      responses:
+        '200': {description: Token y usuario autenticado}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revocar token actual
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Token revocado}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Revocar todos los tokens del usuario
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Tokens revocados}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+  /me:
+    get:
+      tags: [Auth]
+      summary: Usuario autenticado y perfil profesional resumido
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Usuario seguro
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserResponse'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+  /categories:
+    get:
+      tags: [Public]
+      summary: Categorías activas
+      security: []
+      responses:
+        '200': {description: Lista de categorías}
+  /services:
+    get:
+      tags: [Public]
+      summary: Buscar servicios públicos paginados
+      security: []
+      parameters:
+        - {in: query, name: search, schema: {type: string}}
+        - {in: query, name: category, schema: {type: string}, description: Slug de categoría}
+        - {in: query, name: city, schema: {type: string}}
+        - {in: query, name: price_type, schema: {type: string, enum: [fixed, starting_at, quote]}}
+        - {in: query, name: verified, schema: {type: boolean}}
+        - {in: query, name: sort, schema: {type: string, enum: [relevant, rating, price_low, price_high, recent]}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: Servicios públicos seguros}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /services/{service}:
+    get:
+      tags: [Public]
+      summary: Detalle público de servicio
+      security: []
+      parameters: [{$ref: '#/components/parameters/ServiceId'}]
+      responses:
+        '200': {description: Servicio}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /professionals/{professional}:
+    get:
+      tags: [Public]
+      summary: Perfil público sin teléfono, email ni coordenadas exactas
+      security: []
+      parameters: [{$ref: '#/components/parameters/ProfessionalId'}]
+      responses:
+        '200': {description: 'Perfil, servicios y reseñas recientes'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /professionals/{professional}/reviews:
+    get:
+      tags: [Public]
+      summary: Reseñas públicas paginadas
+      security: []
+      parameters:
+        - {$ref: '#/components/parameters/ProfessionalId'}
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: Reseñas visibles}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /favorites:
+    get:
+      tags: [Favorites]
+      summary: Favoritos del cliente
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Profesionales favoritos paginados}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /favorites/{professional}:
+    parameters: [{$ref: '#/components/parameters/ProfessionalId'}]
+    post:
+      tags: [Favorites]
+      summary: Guardar profesional
+      security: [{bearerAuth: []}]
+      responses:
+        '201': {description: Favorito creado}
+        '200': {description: Ya existía}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Favorites]
+      summary: Eliminar profesional guardado
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Favorito eliminado}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /professional/profile:
+    get:
+      tags: [Professional]
+      summary: Perfil profesional propio
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Perfil propio}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    patch:
+      tags: [Professional]
+      summary: Actualizar perfil y avatar
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {$ref: '#/components/schemas/ProfessionalProfileInput'}
+      responses:
+        '200': {description: Perfil actualizado}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /professional/services:
+    get:
+      tags: [Professional]
+      summary: Servicios propios paginados
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Servicios propios}
+    post:
+      tags: [Professional]
+      summary: Crear servicio con imágenes opcionales
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {$ref: '#/components/schemas/ServiceInput'}
+      responses:
+        '201': {description: Servicio creado}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /professional/services/{service}:
+    parameters: [{$ref: '#/components/parameters/ServiceId'}]
+    get:
+      tags: [Professional]
+      summary: Consultar servicio propio
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Servicio propio}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    patch:
+      tags: [Professional]
+      summary: Actualizar servicio propio
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {$ref: '#/components/schemas/ServiceInput'}
+      responses:
+        '200': {description: Servicio actualizado}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Professional]
+      summary: Eliminar servicio propio
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Servicio eliminado}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /professional/availability:
+    get:
+      tags: [Professional]
+      summary: Disponibilidad y última ubicación propias
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Disponibilidad}
+    put:
+      tags: [Professional]
+      summary: Actualizar disponibilidad, coordenadas y radio
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AvailabilityInput'}
+      responses:
+        '200': {description: Disponibilidad actualizada}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /professional/job-invitations:
+    get:
+      tags: [Professional]
+      summary: Invitaciones activas paginadas sin dirección exacta
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Invitaciones}
+  /professional/job-invitations/{invitation}/accept:
+    post:
+      tags: [Professional]
+      summary: Aceptar invitación atómicamente
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/InvitationId'}]
+      responses:
+        '200': {description: Profesional ganador}
+        '409': {description: 'JOB_ALREADY_TAKEN, PROFESSIONAL_BUSY o LOCATION_STALE'}
+  /professional/job-invitations/{invitation}/decline:
+    post:
+      tags: [Professional]
+      summary: Rechazar invitación
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/InvitationId'}]
+      responses:
+        '200': {description: Invitación rechazada}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /jobs/immediate:
+    post:
+      tags: [Jobs]
+      summary: Crear solicitud inmediata y comenzar matching
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {$ref: '#/components/schemas/ImmediateJobInput'}
+      responses:
+        '201': {description: Solicitud en searching}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /jobs/scheduled:
+    post:
+      tags: [Jobs]
+      summary: Crear solicitud programada
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ScheduledJobInput'}
+      responses:
+        '201': {description: Solicitud creada}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /jobs/{job}:
+    get:
+      tags: [Jobs]
+      summary: Trabajo autorizado; datos exactos sólo después del pago
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        '200': {description: Trabajo serializado según rol y pago}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /jobs/{job}/status:
+    get:
+      tags: [Jobs]
+      summary: Estado ligero para polling
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        '200': {description: 'Estado, fecha y match público'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /professional/jobs/{job}/quotes:
+    post:
+      tags: [Jobs]
+      summary: Profesional asignado crea cotización
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QuoteInput'}
+      responses:
+        '201': {description: Cotización creada}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /jobs/{job}/quotes:
+    get:
+      tags: [Jobs]
+      summary: Cotizaciones del trabajo para participantes
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        '200': {description: Cotizaciones paginadas}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /jobs/{job}/quotes/{quote}/accept:
+    post:
+      tags: [Jobs]
+      summary: Cliente propietario acepta cotización
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}, {$ref: '#/components/parameters/QuoteId'}]
+      responses:
+        '200': {description: Trabajo pasa a awaiting_payment}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: QUOTE_EXPIRED o QUOTE_UNAVAILABLE}
+  /jobs/{job}/quotes/{quote}/reject:
+    post:
+      tags: [Jobs]
+      summary: Cliente propietario rechaza cotización
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}, {$ref: '#/components/parameters/QuoteId'}]
+      responses:
+        '200': {description: Cotización rechazada}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /jobs/{job}/checkout:
+    post:
+      tags: [Payments]
+      summary: Preparar checkout de Mercado Pago usando agreed_price
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        '200': {description: checkout_url y cálculo del servidor}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: PAYMENT_REQUIRED o proveedor no disponible}
+  /payments/{payment}:
+    get:
+      tags: [Payments]
+      summary: Pago seguro para participantes
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PaymentId'}]
+      responses:
+        '200': {description: 'Montos decimales y estado, sin secretos ni payloads'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /jobs/{job}/on-the-way:
+    post:
+      tags: [Jobs]
+      summary: Profesional marca En camino
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses: {'200': {description: on_the_way}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /jobs/{job}/arrived:
+    post:
+      tags: [Jobs]
+      summary: Profesional marca Llegué
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses: {'200': {description: arrived}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /jobs/{job}/start:
+    post:
+      tags: [Jobs]
+      summary: Profesional inicia trabajo pagado
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses: {'200': {description: in_progress}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {description: PAYMENT_REQUIRED o transición inválida}}
+  /jobs/{job}/finish:
+    post:
+      tags: [Jobs]
+      summary: Profesional termina y espera confirmación
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses: {'200': {description: awaiting_confirmation}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /jobs/{job}/confirm:
+    post:
+      tags: [Jobs]
+      summary: Cliente confirma con código de finalización
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [completion_code], properties: {completion_code: {type: string, pattern: '^[0-9]{6}$'}}}
+      responses: {'200': {description: completed}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /jobs/{job}/review:
+    post:
+      tags: [Jobs]
+      summary: Cliente reseña un trabajo completado
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [rating], properties: {rating: {type: integer, minimum: 1, maximum: 5}, comment: {type: string, maxLength: 1000}}}
+      responses: {'201': {description: Reseña creada}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Notificaciones propias paginadas
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Notificaciones}}
+  /notifications/{notification}/read:
+    post:
+      tags: [Notifications]
+      summary: Marcar notificación propia como leída
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/NotificationId'}]
+      responses: {'200': {description: Notificación leída}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Marcar todas las notificaciones propias como leídas
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Notificaciones leídas}}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  parameters:
+    ServiceId: {in: path, name: service, required: true, schema: {type: integer}}
+    ProfessionalId: {in: path, name: professional, required: true, schema: {type: integer}}
+    InvitationId: {in: path, name: invitation, required: true, schema: {type: integer}}
+    JobId: {in: path, name: job, required: true, schema: {type: integer}}
+    QuoteId: {in: path, name: quote, required: true, schema: {type: integer}}
+    PaymentId: {in: path, name: payment, required: true, schema: {type: integer}}
+    NotificationId: {in: path, name: notification, required: true, schema: {type: string, format: uuid}}
+  responses:
+    Unauthenticated:
+      description: Token ausente, inválido o revocado
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Forbidden:
+      description: Rol, cuenta o recurso no autorizado
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    NotFound:
+      description: Recurso inexistente o no público
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Conflict:
+      description: Conflicto de estado del dominio
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    ValidationError:
+      description: Datos inválidos
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    RateLimited:
+      description: Límite temporal excedido
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
+        code: {type: string}
+        errors: {type: object, additionalProperties: true}
+    RegisterInput:
+      type: object
+      required: [name, email, phone, role, password, password_confirmation, device_name]
+      properties:
+        name: {type: string, maxLength: 100}
+        email: {type: string, format: email}
+        phone: {type: string}
+        role: {type: string, enum: [client, professional]}
+        password: {type: string, format: password}
+        password_confirmation: {type: string, format: password}
+        device_name: {type: string, maxLength: 100}
+    LoginInput:
+      type: object
+      required: [email, password, device_name]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string, format: password}
+        device_name: {type: string, maxLength: 100}
+    UserResponse:
+      type: object
+      properties:
+        data: {$ref: '#/components/schemas/User'}
+    User:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        role: {type: string, enum: [client, professional, admin]}
+        avatar: {type: string, format: uri, nullable: true}
+        phone: {type: string, nullable: true}
+        status: {type: string, enum: [active, suspended, blocked]}
+    ProfessionalProfileInput:
+      type: object
+      required: [name, phone, experience_years]
+      properties:
+        name: {type: string}
+        phone: {type: string}
+        bio: {type: string, maxLength: 2000}
+        experience_years: {type: integer, minimum: 0, maximum: 60}
+        city: {type: string}
+        state: {type: string}
+        postal_code: {type: string}
+        profile_photo: {type: string, format: binary}
+    ServiceInput:
+      type: object
+      required: [category_id, title, description, price_type]
+      properties:
+        category_id: {type: integer}
+        title: {type: string, minLength: 5, maxLength: 120}
+        description: {type: string, minLength: 20, maxLength: 3000}
+        price_type: {type: string, enum: [fixed, starting_at, quote]}
+        price: {type: string, pattern: '^\d+(\.\d{1,2})?$'}
+        images: {type: array, maxItems: 5, items: {type: string, format: binary}}
+    AvailabilityInput:
+      type: object
+      required: [is_available, service_radius_km]
+      properties:
+        is_available: {type: boolean}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        service_radius_km: {type: integer, enum: [5, 10, 15, 25]}
+    ImmediateJobInput:
+      type: object
+      required: [category_id, description]
+      properties:
+        category_id: {type: integer}
+        service_id: {type: integer, nullable: true}
+        title: {type: string, nullable: true}
+        description: {type: string, minLength: 10, maxLength: 1200}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        address: {type: string}
+        city: {type: string}
+        state: {type: string}
+        postal_code: {type: string}
+        photos: {type: array, maxItems: 3, items: {type: string, format: binary}}
+    ScheduledJobInput:
+      allOf:
+        - {$ref: '#/components/schemas/ImmediateJobInput'}
+        - type: object
+          required: [scheduled_for, scheduled_slot, address, city, state, postal_code]
+          properties:
+            service_mode: {type: string, enum: [scheduled, diagnostic]}
+            scheduled_for: {type: string, format: date-time}
+            scheduled_slot: {type: string, enum: ['08:00-11:00', '11:00-14:00', '14:00-17:00', '17:00-20:00']}
+    QuoteInput:
+      type: object
+      required: [amount, description]
+      properties:
+        amount: {type: string, pattern: '^\d+(\.\d{1,2})?$'}
+        description: {type: string, maxLength: 300}

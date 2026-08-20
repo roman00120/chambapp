@@ -95,6 +95,31 @@ npm run build
 
 La suite actual cubre autenticación, permisos, marketplace, cotizaciones, privacidad, pagos, comisión histórica, workflow, moderación, matching por cercanía, disponibilidad, expiración, búsqueda nueva, polling y modo programado.
 
+## API REST v1 y futura app móvil
+
+Chambapp conserva la web Blade + Bootstrap + sesiones y agrega una interfaz REST versionada en `/api/v1`. Ambas interfaces usan los mismos modelos, Policies y servicios de dominio (`OnDemandMatchingService`, `JobWorkflowService`, pagos, cálculo de comisión, reseñas y protección de contacto); la web no depende de la API.
+
+La autenticación móvil usa Laravel Sanctum mediante `Authorization: Bearer TOKEN`. Los endpoints principales permiten registro/login, revocación del token actual o de todos los dispositivos, categorías, servicios, perfiles públicos, favoritos, disponibilidad, solicitudes inmediatas y programadas, matching, invitaciones, cotizaciones, checkout, pagos, workflow, reseñas y notificaciones. Los roles públicos admitidos al registrar son exclusivamente `client` y `professional`.
+
+El contrato completo está en [docs/openapi.yaml](docs/openapi.yaml). Comprobación mínima:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+curl http://127.0.0.1:8000/api/v1/categories
+```
+
+Las colecciones grandes están paginadas y las fechas usan ISO 8601. Los importes se entregan como cadenas decimales. Teléfono, email, dirección y coordenadas exactas no se serializan públicamente; los participantes sólo obtienen la ubicación privada después de un pago aprobado. El dispositivo nunca decide monto, comisión, profesional ganador, estado financiero ni transiciones críticas.
+
+Al suspender/bloquear una cuenta o restablecer su contraseña se revocan todos sus tokens API. Cerrar sesión en la web no revoca tokens móviles; `/api/v1/auth/logout` revoca el dispositivo actual y `/api/v1/auth/logout-all` revoca todos los dispositivos.
+
+Para ejecutar únicamente las pruebas API:
+
+```bash
+php artisan test tests/Feature/Api/V1
+```
+
+Una futura app Flutter, React Native, Kotlin o Swift podrá guardar el token en almacenamiento seguro y consumir este contrato. Ninguna APK debe contener `APP_KEY`, credenciales de base de datos, secretos de Mercado Pago ni secretos de webhook.
+
 ## Documentación adicional
 
 - [Despliegue](DEPLOYMENT.md)

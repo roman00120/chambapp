@@ -106,3 +106,22 @@ Activa los backups de Hostinger y conserva una copia de la base MySQL y de `stor
 ## Validación de Fase 13
 
 Prueba sobre HTTPS y móvil: crear una chamba inmediata, negar geolocalización y completar dirección manual, recibir una invitación, aceptar/cotizar, aprobar pago y recorrer en-camino/llegada/inicio. Confirma que el polling no devuelve dirección, teléfono ni coordenadas y que una ubicación con más de 30 minutos no recibe invitaciones. Variables opcionales: `CHAMBAPP_IMMEDIATE_TIMEOUT=5`, `CHAMBAPP_INVITATION_TIMEOUT=3` y `CHAMBAPP_LOCATION_FRESHNESS=30`.
+
+## API v1, Sanctum y CORS
+
+La API se despliega en el mismo backend bajo `https://chambapp.mx/api/v1`. Ejecuta `composer install --no-dev --optimize-autoloader` y `php artisan migrate --force` para crear `personal_access_tokens`. Confirma que `GET /api/v1/health` responda `200` y que las rutas protegidas rechacen peticiones sin Bearer token con `401`.
+
+Configura `CHAMBAPP_CORS_ALLOWED_ORIGINS` como una lista separada por comas de orígenes web autorizados. No uses `*` con credenciales. Las aplicaciones móviles nativas normalmente no dependen de CORS, pero siempre deben usar HTTPS y `Authorization: Bearer TOKEN`. No deshabilites CSRF global: las rutas Blade lo siguen necesitando.
+
+Después del despliegue ejecuta:
+
+```bash
+php artisan optimize:clear
+php artisan migrate --force
+php artisan optimize
+php artisan test tests/Feature/Api/V1
+```
+
+Los límites específicos protegen login, registro, creación de trabajos, polling, aceptación, cotizaciones, checkout y workflow. Revisa que el proxy conserve los encabezados `Authorization`, `Origin` y `Accept`. No expongas HTTP en producción: un token transmitido sin TLS puede ser capturado.
+
+Sanctum almacena únicamente hashes de tokens. Suspender o bloquear un usuario y restablecer contraseña revoca todos sus tokens. La API no requiere un servidor adicional en Hostinger Business; puede migrarse después manteniendo el contrato `/api/v1`.
