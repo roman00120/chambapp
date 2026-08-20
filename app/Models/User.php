@@ -19,7 +19,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'password', 'role', 'status',
+        'name', 'email', 'google_id', 'avatar_url', 'phone', 'password', 'role', 'status', 'email_verified_at',
     ];
 
     protected $hidden = [
@@ -54,6 +54,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function isActive(): bool
     {
         return $this->status === UserStatus::ACTIVE;
+    }
+
+    public function hasGoogleLogin(): bool
+    {
+        return filled($this->google_id);
     }
 
     public function dashboardRoute(): string

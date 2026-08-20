@@ -14,6 +14,12 @@
 
                         <x-auth.form-errors />
 
+                        <div class="d-flex flex-column flex-sm-row gap-2 mb-3">
+                            <a class="ui-button ui-button--outline flex-fill" href="{{ route('auth.google.redirect', ['account_type' => 'client']) }}"><i class="bi bi-google" aria-hidden="true"></i> Registrarme como cliente</a>
+                            <a class="ui-button ui-button--outline flex-fill" href="{{ route('auth.google.redirect', ['account_type' => 'professional']) }}"><i class="bi bi-google" aria-hidden="true"></i> Registrarme como profesional</a>
+                        </div>
+                        <div class="auth-divider mb-3"><span>o con tu correo</span></div>
+
                         <form method="POST" action="{{ route('register.store') }}" novalidate>
                             @csrf
                             <div class="mb-3">

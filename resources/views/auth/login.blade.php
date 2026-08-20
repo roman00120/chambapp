@@ -14,6 +14,9 @@
 
                         <x-auth.form-errors />
 
+                        <a class="ui-button ui-button--outline w-100 mb-3" href="{{ route('auth.google.redirect', ['account_type' => 'client']) }}"><i class="bi bi-google" aria-hidden="true"></i> Continuar con Google</a>
+                        <div class="auth-divider mb-3"><span>o con tu correo</span></div>
+
                         <form method="POST" action="{{ route('login.store') }}" novalidate>
                             @csrf
                             <div class="mb-3">

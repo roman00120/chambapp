@@ -23,6 +23,8 @@ use App\Http\Controllers\ClientJobRequestController;
 use App\Http\Controllers\ClientOnDemandController;
 use App\Http\Controllers\ClientPaymentHistoryController;
 use App\Http\Controllers\ClientQuoteController;
+use App\Http\Controllers\CommerceController;
+use App\Http\Controllers\TipController;
 use App\Http\Controllers\Dashboard\ClientDashboardController;
 use App\Http\Controllers\Dashboard\ProfessionalDashboardController;
 use App\Http\Controllers\FavoriteController;
@@ -49,9 +51,16 @@ use App\Http\Controllers\PublicServiceController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\GoogleAuthController;
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/health', HealthController::class)->name('health');
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+Route::get('/compras/{state}', [CommerceController::class, 'purchaseReturn'])->whereIn('state', ['success', 'pending', 'error'])->name('commerce.return');
+Route::get('/compras/exito', fn () => app(CommerceController::class)->purchaseReturn('success'))->name('commerce.return.success');
+Route::get('/compras/pendiente', fn () => app(CommerceController::class)->purchaseReturn('pending'))->name('commerce.return.pending');
+Route::get('/compras/error', fn () => app(CommerceController::class)->purchaseReturn('error'))->name('commerce.return.error');
 Route::get('/terminos', [LegalController::class, 'terms'])->name('legal.terms');
 Route::get('/privacidad', [LegalController::class, 'privacy'])->name('legal.privacy');
 Route::get('/sitemap.xml', fn () => response()->view('seo.sitemap', [], 200, ['Content-Type' => 'application/xml']))->name('sitemap');
@@ -134,7 +143,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/trabajos/{jobRequest}/en-camino', [JobWorkflowController::class, 'onTheWay'])->middleware('throttle:workflow')->name('job-requests.on-the-way');
     Route::post('/trabajos/{jobRequest}/llegue', [JobWorkflowController::class, 'arrive'])->middleware('throttle:workflow')->name('job-requests.arrive');
     Route::post('/trabajos/{jobRequest}/terminar', [JobWorkflowController::class, 'finish'])->middleware('throttle:workflow')->name('job-requests.finish');
-    Route::post('/trabajos/{jobRequest}/confirmar', [JobWorkflowController::class, 'complete'])->middleware('throttle:workflow')->name('job-requests.complete');
+        Route::post('/trabajos/{jobRequest}/confirmar', [JobWorkflowController::class, 'complete'])->middleware('throttle:workflow')->name('job-requests.complete');
+        Route::post('/trabajos/{jobRequest}/propina', [TipController::class, 'store'])->middleware('throttle:payments')->name('job-requests.tip');
     Route::post('/trabajos/{jobRequest}/problema', [JobDisputeController::class, 'store'])->middleware('throttle:workflow')->name('job-requests.dispute');
     Route::post('/trabajos/{jobRequest}/cancelar', [JobWorkflowController::class, 'cancel'])->middleware('throttle:workflow')->name('job-requests.cancel');
     Route::post('/trabajos/{jobRequest}/cotizaciones', [ProfessionalQuoteController::class, 'store'])->middleware('throttle:quotes')->name('job-quotes.store');
@@ -164,6 +174,10 @@ Route::middleware(['auth', 'active', 'role:professional'])
         Route::get('/pagos/configuracion/conectar', [ProfessionalPaymentController::class, 'connect'])->name('payments.connect');
         Route::get('/pagos/configuracion/oauth/callback', [ProfessionalPaymentController::class, 'callback'])->name('payments.oauth-callback');
         Route::get('/ganancias', ProfessionalEarningsController::class)->name('earnings');
+        Route::get('/promocionar', [CommerceController::class, 'featured'])->name('commerce.featured');
+        Route::post('/promocionar/{service}', [CommerceController::class, 'buyFeatured'])->name('commerce.featured.buy');
+        Route::get('/tienda', [CommerceController::class, 'store'])->name('commerce.store');
+        Route::post('/tienda/{item}', [CommerceController::class, 'buyItem'])->name('commerce.store.buy');
 
         Route::get('/servicios', [ProfessionalServiceController::class, 'index'])->name('services.index');
         Route::get('/servicios/crear', [ProfessionalServiceController::class, 'create'])->name('services.create');

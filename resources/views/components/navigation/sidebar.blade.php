@@ -14,6 +14,8 @@
         <a class="sidebar-link" href="{{ route('professional.services.index') }}"><i class="bi bi-tools" aria-hidden="true"></i> Servicios</a>
         <a class="sidebar-link" href="{{ route('professional.jobs.index') }}"><i class="bi bi-clipboard-check" aria-hidden="true"></i> Solicitudes</a>
         <a class="sidebar-link" href="{{ route('professional.payments.settings') }}"><i class="bi bi-wallet2" aria-hidden="true"></i> Pagos</a>
+        <a class="sidebar-link" href="{{ route('professional.commerce.featured') }}"><i class="bi bi-megaphone" aria-hidden="true"></i> Promocionar</a>
+        <a class="sidebar-link" href="{{ route('professional.commerce.store') }}"><i class="bi bi-shop" aria-hidden="true"></i> Tienda de perfil</a>
         <a class="sidebar-link" href="{{ route('professional.profile.show') }}"><i class="bi bi-person-circle" aria-hidden="true"></i> Perfil</a>
     @else
         <p class="sidebar-label">Administración</p>

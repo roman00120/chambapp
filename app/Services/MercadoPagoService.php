@@ -69,9 +69,58 @@ class MercadoPagoService
         ];
     }
 
+    public function createPlatformPreference(string $title, string $amount, string $externalReference): array
+    {
+        $token = (string) config('services.mercadopago.access_token');
+        if ($token === '') {
+            throw new MercadoPagoException('Configura MERCADOPAGO_ACCESS_TOKEN para comprar promociones y personalizaciones.');
+        }
+
+        $response = $this->apiRequest($token)->post($this->apiUrl('/checkout/preferences'), [
+            'items' => [[
+                'id' => $externalReference,
+                'title' => Str::limit($title, 120),
+                'quantity' => 1,
+                'currency_id' => config('chambapp.payments.currency', 'MXN'),
+                'unit_price' => $amount,
+            ]],
+            'external_reference' => $externalReference,
+            'back_urls' => [
+                'success' => route('commerce.return.success'),
+                'pending' => route('commerce.return.pending'),
+                'failure' => route('commerce.return.error'),
+            ],
+            'auto_return' => 'approved',
+            'notification_url' => route('webhooks.mercadopago'),
+        ]);
+
+        if (! $response->successful() || ! filled($response->json('id')) || ! filled($response->json('init_point'))) {
+            throw new MercadoPagoException('Mercado Pago no pudo crear la compra.');
+        }
+
+        return [
+            'id' => (string) $response->json('id'),
+            'url' => (string) ($this->isProduction() ? $response->json('init_point') : ($response->json('sandbox_init_point') ?: $response->json('init_point'))),
+        ];
+    }
+
     public function getPayment(string $providerPaymentId, ProfessionalProfile $professional): array
     {
         $response = $this->apiRequest($this->sellerToken($professional))->get($this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
+        if (! $response->successful() || ! is_array($response->json())) {
+            throw new MercadoPagoException('Mercado Pago no pudo consultar el pago.');
+        }
+
+        return $response->json();
+    }
+
+    public function getPlatformPayment(string $providerPaymentId): array
+    {
+        $token = (string) config('services.mercadopago.access_token');
+        if ($token === '') {
+            throw new MercadoPagoException('Mercado Pago de plataforma no está configurado.');
+        }
+        $response = $this->apiRequest($token)->get($this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
         if (! $response->successful() || ! is_array($response->json())) {
             throw new MercadoPagoException('Mercado Pago no pudo consultar el pago.');
         }

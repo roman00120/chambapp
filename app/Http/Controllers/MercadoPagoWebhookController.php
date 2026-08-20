@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\CommerceOrder;
 use App\Models\ProfessionalProfile;
 use App\Services\MercadoPagoService;
 use App\Services\MercadoPagoWebhookSignature;
 use App\Services\PaymentService;
+use App\Services\CommerceService;
+use App\Services\PaymentCalculationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +21,8 @@ class MercadoPagoWebhookController extends Controller
         MercadoPagoWebhookSignature $signature,
         MercadoPagoService $mercadoPago,
         PaymentService $payments,
+        CommerceService $commerce,
+        PaymentCalculationService $calculation,
     ): JsonResponse {
         if (! $signature->isValid($request, config('services.mercadopago.webhook_secret'))) {
             Log::warning('Mercado Pago webhook signature rejected', [
@@ -31,17 +36,32 @@ class MercadoPagoWebhookController extends Controller
         $providerPaymentId = (string) ($request->query('data.id') ?: data_get($request->input('data'), 'id'));
         $sellerId = (string) $request->input('user_id');
         $professional = ProfessionalProfile::query()->where('mercadopago_user_id', $sellerId)->first();
-        if (! $professional || $providerPaymentId === '') {
+        if ($providerPaymentId === '') {
             return response()->json(['received' => true]);
         }
 
         try {
-            $providerData = $mercadoPago->getPayment($providerPaymentId, $professional);
+            $providerData = $professional
+                ? $mercadoPago->getPayment($providerPaymentId, $professional)
+                : $mercadoPago->getPlatformPayment($providerPaymentId);
         } catch (\Throwable) {
             return response()->json(['message' => 'Provider unavailable.'], 202);
         }
 
         $reference = (string) data_get($providerData, 'external_reference');
+        $commerceOrder = CommerceOrder::query()->with(['professional', 'service'])->where('external_reference', $reference)->first();
+        if ($commerceOrder) {
+            if (! $calculation->sameAmount((string) data_get($providerData, 'transaction_amount'), (string) $commerceOrder->amount)) {
+                return response()->json(['received' => true]);
+            }
+            if (strtolower((string) data_get($providerData, 'status')) === 'approved') {
+                $commerce->applyPaidOrder($commerceOrder);
+            }
+            return response()->json(['received' => true]);
+        }
+        if (! $professional) {
+            return response()->json(['received' => true]);
+        }
         $payment = Payment::query()->where('external_reference', $reference)->first();
         if (! $payment) {
             Log::warning('Mercado Pago webhook payment not found', [

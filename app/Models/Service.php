@@ -20,7 +20,7 @@ class Service extends Model
 
     protected $fillable = [
         'professional_id', 'category_id', 'title', 'slug', 'description',
-        'price', 'price_type', 'is_active', 'is_featured',
+        'price', 'price_type', 'is_active', 'is_featured', 'featured_until',
     ];
 
     protected function casts(): array
@@ -30,6 +30,7 @@ class Service extends Model
             'price_type' => PriceType::class,
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'featured_until' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }

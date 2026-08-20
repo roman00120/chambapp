@@ -17,6 +17,7 @@ class StoreScheduledJobRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'service_mode' => ['nullable', Rule::in(['scheduled', 'diagnostic'])],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'service_id' => ['nullable', 'integer', 'exists:services,id'],
             'title' => ['required', 'string', 'max:160'],

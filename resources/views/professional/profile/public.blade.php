@@ -4,7 +4,7 @@
 @section('meta_description', 'Perfil público de '.$profile->user->name.' en Chambapp.')
 
 @section('content')
-    <section class="marketplace-page professional-public-page">
+    <section class="marketplace-page professional-public-page profile-theme--{{ $profile->profile_theme }} profile-banner--{{ $profile->profile_banner }} profile-frame--{{ $profile->profile_frame }} profile-animation--{{ $profile->profile_animation }}" style="--profile-accent: {{ $profile->profile_accent }}">
         <div class="container">
             <nav class="breadcrumb marketplace-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('home') }}">Inicio</a><span>/</span><strong>Perfil profesional</strong></nav>
             <div class="row g-4 g-lg-5">

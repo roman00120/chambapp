@@ -61,6 +61,43 @@ class PaymentService
         return $payment->fresh();
     }
 
+    public function startTipCheckout(JobRequest $jobRequest, User $client, string $amount): Payment
+    {
+        $payment = DB::transaction(function () use ($jobRequest, $client, $amount): Payment {
+            $job = JobRequest::query()->with('professional')->lockForUpdate()->findOrFail($jobRequest->getKey());
+            if ($job->client_id !== $client->getKey() || $job->status !== JobStatus::COMPLETED) {
+                throw new DomainException('La propina solo puede agregarse a un trabajo completado.');
+            }
+            if (! $job->professional?->isMercadoPagoConnected()) {
+                throw new DomainException('El profesional debe conectar Mercado Pago para recibir la propina.');
+            }
+            $money = $this->calculation->calculate($amount);
+            $payment = $job->payments()->create([
+                'client_id' => $job->client_id,
+                'professional_id' => $job->professional_id,
+                'provider' => config('chambapp.payments.provider'),
+                'currency' => $money->currency,
+                'gross_amount' => $money->grossAmount,
+                'platform_fee_percent' => $money->platformFeePercent,
+                'platform_fee' => $money->platformFee,
+                'provider_fee' => null,
+                'professional_amount' => $money->professionalAmount,
+                'tip_amount' => $money->grossAmount,
+                'tip_platform_fee' => $money->platformFee,
+                'tip_professional_amount' => $money->professionalAmount,
+                'status' => PaymentStatus::PENDING,
+            ]);
+            $payment->forceFill(['external_reference' => sprintf('CHAMBAPP-JOB-%06d-TIP-%06d', $job->getKey(), $payment->getKey())])->save();
+
+            return $payment;
+        });
+
+        $preference = $this->mercadoPago->createPreference($payment);
+        $payment->forceFill(['external_preference_id' => $preference['id'], 'checkout_url' => $preference['url']])->save();
+
+        return $payment->fresh();
+    }
+
     public function applyProviderPayment(Payment $payment, array $providerData, ?string $providerEventId, array $auditPayload): Payment
     {
         return DB::transaction(function () use ($payment, $providerData, $providerEventId, $auditPayload): Payment {

@@ -7,6 +7,15 @@ return [
         'checkout_timeout' => (int) env('CHAMBAPP_PAYMENT_TIMEOUT', 10),
         'provider' => 'mercadopago',
     ],
+    'commerce' => [
+        'featured_prices' => [1 => '49.00', 7 => '199.00', 30 => '599.00'],
+        'store_items' => [
+            'theme-sunset' => ['kind' => 'theme', 'name' => 'Tema Atardecer', 'price' => '79.00', 'value' => 'sunset'],
+            'frame-fire' => ['kind' => 'frame', 'name' => 'Marco Fuego', 'price' => '49.00', 'value' => 'fire'],
+            'animation-glow' => ['kind' => 'animation', 'name' => 'Brillo sutil', 'price' => '39.00', 'value' => 'glow'],
+            'banner-pro' => ['kind' => 'banner', 'name' => 'Banner Profesional', 'price' => '59.00', 'value' => 'pro'],
+        ],
+    ],
     'on_demand' => [
         'immediate_request_timeout_minutes' => (int) env('CHAMBAPP_IMMEDIATE_TIMEOUT', 5),
         'invitation_timeout_minutes' => (int) env('CHAMBAPP_INVITATION_TIMEOUT', 3),

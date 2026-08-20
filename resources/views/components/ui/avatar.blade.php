@@ -7,7 +7,7 @@
         ->take(2)
         ->map(fn (string $part) => mb_strtoupper(mb_substr($part, 0, 1)))
         ->join('');
-    $avatarSrc = $src ?? $user?->profile_photo ?? null;
+    $avatarSrc = $src ?? $user?->profile_photo ?? $user?->avatar_url ?? null;
     $avatarUrl = $avatarSrc && preg_match('/^(https?:\/\/|\/)/', $avatarSrc)
         ? $avatarSrc
         : ($avatarSrc ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatarSrc) : null);

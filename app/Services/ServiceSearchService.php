@@ -101,7 +101,10 @@ class ServiceSearchService
             'price_low' => $query->orderByRaw('price IS NULL')->orderBy('price'),
             'price_high' => $query->orderByRaw('price IS NULL')->orderByDesc('price'),
             'recent' => $query->latest('created_at'),
-            default => $query->orderByDesc($this->professionalRatingSubquery())
+            default => $query->orderByDesc('is_featured')
+                ->orderByRaw('featured_until IS NULL')
+                ->orderByDesc('featured_until')
+                ->orderByDesc($this->professionalRatingSubquery())
                 ->orderByDesc($this->professionalReviewsSubquery())
                 ->latest('created_at'),
         };

@@ -21,6 +21,6 @@ class ExampleTest extends TestCase
             ->assertSee('Chambapp')
             ->assertSee('Buscar profesionales')
             ->assertSee('width=device-width, initial-scale=1')
-            ->assertSee('images/chambapp-logo.jpeg');
+            ->assertSee('images/pwa/icon-192.png');
     }
 }

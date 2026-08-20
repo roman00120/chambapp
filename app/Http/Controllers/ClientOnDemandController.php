@@ -69,7 +69,7 @@ class ClientOnDemandController extends Controller
             'client_id' => $request->user()->getKey(),
             'service_id' => $service?->getKey(),
             'category_id' => $data['category_id'],
-            'service_mode' => ServiceMode::SCHEDULED,
+            'service_mode' => ServiceMode::from($data['service_mode'] ?? 'scheduled'),
             'title' => $data['title'],
             'description' => $data['description'],
             'address' => $data['address'], 'city' => $data['city'], 'state' => $data['state'], 'postal_code' => $data['postal_code'],

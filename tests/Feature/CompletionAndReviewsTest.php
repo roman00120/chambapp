@@ -38,7 +38,10 @@ class CompletionAndReviewsTest extends TestCase
         $this->assertNotNull($job->fresh()->finished_at);
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $client->id]);
 
-        $this->actingAs($client)->post(route('job-requests.complete', $job))->assertRedirect();
+        $this->actingAs($client)->post(route('job-requests.complete', $job))->assertForbidden();
+        $this->actingAs($professional->user)->post(route('job-requests.complete', $job), [
+            'completion_code' => $job->fresh()->completion_code,
+        ])->assertRedirect();
         $this->assertSame(JobStatus::COMPLETED, $job->fresh()->status);
         $this->assertNotNull($job->fresh()->completed_at);
         $this->assertSame(1, $professional->fresh()->total_completed_jobs);

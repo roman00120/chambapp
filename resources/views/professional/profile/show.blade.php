@@ -73,6 +73,7 @@
                     </x-ui.card>
                 </div>
             </div>
+            @include('professional.profile._achievements')
         </div>
     </section>
 @endsection

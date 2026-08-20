@@ -70,7 +70,7 @@ class JobRequestPolicy
 
     public function complete(User $user, JobRequest $jobRequest): bool
     {
-        return $this->isClientParticipant($user, $jobRequest)
+        return $this->isProfessionalParticipant($user, $jobRequest)
             && $jobRequest->status === JobStatus::AWAITING_CONFIRMATION;
     }
 

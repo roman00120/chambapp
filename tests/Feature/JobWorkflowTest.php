@@ -156,8 +156,12 @@ class JobWorkflowTest extends TestCase
         $this->actingAs($professional->user)->post(route('job-requests.finish', $job))->assertRedirect();
         $this->assertSame(JobStatus::AWAITING_CONFIRMATION, $job->fresh()->status);
         $this->assertNotNull($job->fresh()->finished_at);
-        $this->actingAs($professional->user)->post(route('job-requests.complete', $job))->assertForbidden();
-        $this->actingAs($client)->post(route('job-requests.complete', $job))->assertRedirect();
+        $this->actingAs($professional->user)->post(route('job-requests.complete', $job))->assertSessionHasErrors('completion_code');
+        $this->actingAs($client)->post(route('job-requests.complete', $job))->assertForbidden();
+        $this->actingAs($professional->user)->post(route('job-requests.complete', $job), [
+            'completion_code' => $job->fresh()->completion_code,
+        ])->assertRedirect();
+        $this->actingAs($client)->post(route('job-requests.complete', $job))->assertForbidden();
         $this->assertSame(JobStatus::COMPLETED, $job->fresh()->status);
         $this->assertNotNull($job->fresh()->completed_at);
     }

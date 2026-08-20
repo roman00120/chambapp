@@ -31,6 +31,7 @@ class ProfessionalProfile extends Model
         'location_updated_at', 'service_radius_km',
         'mercadopago_user_id', 'mercadopago_access_token', 'mercadopago_refresh_token',
         'mercadopago_public_key', 'mercadopago_token_expires_at', 'mercadopago_connected_at',
+        'profile_theme', 'profile_banner', 'profile_frame', 'profile_animation', 'profile_accent',
     ];
 
     protected function casts(): array
@@ -112,6 +113,25 @@ class ProfessionalProfile extends Model
         return $this->completionPercentage() === 100;
     }
 
+    public function achievements(): array
+    {
+        $items = [];
+        if ($this->total_completed_jobs >= 1) {
+            $items[] = ['icon' => 'bi-check2-circle', 'title' => 'Primer trabajo', 'text' => 'Completaste tu primera chamba.'];
+        }
+        if ($this->total_completed_jobs >= 5) {
+            $items[] = ['icon' => 'bi-award', 'title' => 'Constante', 'text' => 'Cinco trabajos completados correctamente.'];
+        }
+        if ($this->total_completed_jobs >= 10) {
+            $items[] = ['icon' => 'bi-trophy', 'title' => 'Experto en acción', 'text' => 'Diez trabajos completados.'];
+        }
+        if ($this->total_reviews >= 3 && (float) $this->average_rating >= 4.5) {
+            $items[] = ['icon' => 'bi-star-fill', 'title' => 'Muy recomendado', 'text' => 'Calificación promedio superior a 4.5.'];
+        }
+
+        return $items;
+    }
+
     public function isMercadoPagoConnected(): bool
     {
         return filled($this->mercadopago_user_id)
@@ -176,5 +196,10 @@ class ProfessionalProfile extends Model
     public function reports(): MorphMany
     {
         return $this->morphMany(Report::class, 'reportable');
+    }
+
+    public function commerceOrders(): HasMany
+    {
+        return $this->hasMany(CommerceOrder::class, 'professional_id');
     }
 }

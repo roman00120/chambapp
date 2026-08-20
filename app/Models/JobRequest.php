@@ -23,7 +23,7 @@ class JobRequest extends Model
         'address', 'city', 'state', 'postal_code', 'latitude', 'longitude',
         'requested_date', 'agreed_price', 'status', 'accepted_at', 'started_at',
         'completed_at', 'cancelled_at',
-        'finished_at', 'cancellation_reason', 'scheduled_for', 'scheduled_slot',
+        'finished_at', 'completion_code', 'completion_code_expires_at', 'completion_confirmed_at', 'cancellation_reason', 'scheduled_for', 'scheduled_slot',
         'search_started_at', 'search_expires_at', 'matched_at', 'on_the_way_at',
         'arrived_at', 'search_round', 'search_radius_km', 'photo_paths',
     ];
@@ -42,6 +42,9 @@ class JobRequest extends Model
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'finished_at' => 'datetime',
+            'completion_code' => 'encrypted',
+            'completion_code_expires_at' => 'datetime',
+            'completion_confirmed_at' => 'datetime',
             'scheduled_for' => 'datetime',
             'search_started_at' => 'datetime',
             'search_expires_at' => 'datetime',

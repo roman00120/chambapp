@@ -18,7 +18,7 @@ class Payment extends Model
         'job_request_id', 'client_id', 'professional_id', 'provider',
         'external_payment_id', 'external_reference', 'currency', 'gross_amount',
         'platform_fee_percent', 'platform_fee', 'provider_fee', 'professional_amount',
-        'external_preference_id', 'checkout_url', 'status',
+        'external_preference_id', 'checkout_url', 'status', 'tip_amount', 'tip_platform_fee', 'tip_professional_amount',
         'paid_at', 'refunded_at',
     ];
 
@@ -30,6 +30,9 @@ class Payment extends Model
             'platform_fee' => 'decimal:2',
             'provider_fee' => 'decimal:2',
             'professional_amount' => 'decimal:2',
+            'tip_amount' => 'decimal:2',
+            'tip_platform_fee' => 'decimal:2',
+            'tip_professional_amount' => 'decimal:2',
             'status' => PaymentStatus::class,
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',

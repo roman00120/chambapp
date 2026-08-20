@@ -4,17 +4,53 @@
 @section('meta_description', 'Conecta con profesionales verificados cerca de ti. Rápido, seguro y confiable.')
 
 @section('content')
+    @php
+        $verifiedCount = (int) data_get($homeStats, 'verified_professionals', 0);
+        $completedCount = (int) data_get($homeStats, 'completed_jobs', 0);
+        $averageRating = data_get($homeStats, 'average_rating');
+        $reviewCount = (int) data_get($homeStats, 'total_reviews', 0);
+        $serviceCount = (int) data_get($homeStats, 'active_services', 0);
+        $availableCount = (int) data_get($homeStats, 'available_professionals', 0);
+    @endphp
     <section id="inicio" class="hero-landing">
-        <div class="container"><div class="row align-items-center g-4 g-xl-5"><div class="col-12 col-lg-6">
-            <span class="hero-landing__kicker"><i class="bi bi-stars"></i> Chambas ahora, soluciones al instante</span>
-            <h1 class="hero-landing__title">Encuentra al profesional <span>perfecto</span> para tu chamba</h1>
-            <p class="hero-landing__copy">Conecta con profesionales verificados cerca de ti. Rápido, seguro y confiable.</p>
-            <div class="hero-landing__actions">@auth @if (auth()->user()->isClient())<x-ui.button href="{{ route('client.ondemand.create') }}">Solicitar chamba ahora <i class="bi bi-arrow-up-right"></i></x-ui.button>@else<x-ui.button href="{{ route(auth()->user()->dashboardRoute()) }}">Ir a mi espacio <i class="bi bi-arrow-up-right"></i></x-ui.button>@endif @else<x-ui.button href="{{ route('register') }}">Solicitar chamba ahora <i class="bi bi-arrow-up-right"></i></x-ui.button>@endauth<a class="ui-button ui-button--outline" href="{{ route('register') }}">Soy profesional</a></div>
-            <div class="hero-trust-row"><span><i class="bi bi-patch-check-fill"></i> Profesionales verificados</span><span><i class="bi bi-shield-check"></i> Pagos seguros</span><span><i class="bi bi-hand-thumbs-up-fill"></i> Garantía Chambapp</span></div>
-        </div><div class="col-12 col-lg-6"><div class="hero-visual"><img src="{{ asset('images/hero-professional.png') }}" alt="Profesional Chambapp listo para ayudarte"><div class="hero-search-panel"><div class="hero-search-panel__heading"><strong>¿Qué necesitas?</strong><span>×</span></div><label for="hero-category">Servicio</label><div class="hero-search-panel__select" id="hero-category"><i class="bi bi-tools"></i><span>Selecciona una categoría</span><i class="bi bi-chevron-down"></i></div><div class="hero-search-panel__select"><i class="bi bi-geo-alt"></i><span>Mi ubicación actual</span><i class="bi bi-x-circle"></i></div><a class="ui-button ui-button--primary w-100" href="{{ route('marketplace.search') }}">Buscar profesionales</a></div><div class="hero-visual__availability"><span class="hero-visual__dot"></span> Profesionales disponibles cerca de ti</div></div></div></div></div>
+        <div class="hero-landing__wash" aria-hidden="true"></div>
+        <div class="container hero-layout">
+            <div class="hero-copy-column">
+                <span class="hero-landing__kicker"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> Chambas ahora, <b>soluciones al instante</b></span>
+                <h1 class="hero-landing__title"><span class="hero-title-line">Encuentra al</span><span class="hero-title-line">profesional</span><span class="hero-title-line hero-title-line--accent">perfecto</span><span class="hero-title-line">para tu chamba</span></h1>
+                <p class="hero-landing__copy">Conecta con profesionales verificados cerca de ti.<br>Rápido, seguro y confiable.</p>
+                <div class="hero-landing__actions">@auth @if (auth()->user()->isClient())<x-ui.button href="{{ route('client.ondemand.create') }}">Solicitar chamba ahora <i class="bi bi-arrow-right" aria-hidden="true"></i></x-ui.button>@else<x-ui.button href="{{ route(auth()->user()->dashboardRoute()) }}">Ir a mi espacio <i class="bi bi-arrow-right" aria-hidden="true"></i></x-ui.button>@endif @else<x-ui.button href="{{ route('register') }}">Solicitar chamba ahora <i class="bi bi-arrow-right" aria-hidden="true"></i></x-ui.button>@endauth<a class="ui-button ui-button--outline" href="{{ route('register') }}">Soy profesional</a></div>
+                <div class="hero-trust-grid" aria-label="Beneficios de Chambapp">
+                    <article><span class="hero-trust-grid__icon hero-trust-grid__icon--warm"><i class="bi bi-patch-check" aria-hidden="true"></i></span><div><strong>Profesionales verificados</strong><small>Perfiles verificados y<br>calificaciones reales</small></div></article>
+                    <article><span class="hero-trust-grid__icon hero-trust-grid__icon--blue"><i class="bi bi-bag-check" aria-hidden="true"></i></span><div><strong>Pagos seguros</strong><small>Paga de forma segura<br>con Mercado Pago</small></div></article>
+                    <article><span class="hero-trust-grid__icon hero-trust-grid__icon--warm"><i class="bi bi-shield-check" aria-hidden="true"></i></span><div><strong>Garantía Chambapp</strong><small>Tu satisfacción es nuestra<br>prioridad</small></div></article>
+                </div>
+            </div>
+            <div class="hero-stage">
+                <div class="hero-stage__dots" aria-hidden="true"></div>
+                <div class="hero-visual"><picture><img src="{{ asset('images/hero-professional.png') }}" width="1024" height="1536" fetchpriority="high" alt="Profesional Chambapp listo para ayudarte"></picture></div>
+                <form method="GET" action="{{ route('marketplace.search') }}" class="hero-search-panel" aria-label="Buscar profesionales">
+                    <div class="hero-search-panel__heading"><span class="hero-search-panel__mark"><img src="{{ asset('images/pwa/icon-192.png') }}" alt="" aria-hidden="true"></span><strong>¿Qué necesitas?</strong></div>
+                    <div class="hero-search-panel__field"><label for="hero-category">Servicio</label><div class="hero-search-panel__control"><i class="bi bi-tools" aria-hidden="true"></i><select id="hero-category" name="category"><option value="">Selecciona una categoría</option>@foreach ($categories as $category)<option value="{{ $category->slug }}">{{ $category->name }}</option>@endforeach</select><i class="bi bi-chevron-down" aria-hidden="true"></i></div></div>
+                    <div class="hero-search-panel__field"><label for="hero-location">Ubicación</label><div class="hero-search-panel__control"><i class="bi bi-geo-alt" aria-hidden="true"></i><input id="hero-location" name="city" type="search" placeholder="Mi ubicación actual" autocomplete="address-level2"><i class="bi bi-crosshair" aria-hidden="true"></i></div></div>
+                    <button class="ui-button ui-button--primary w-100" type="submit">Buscar profesionales</button>
+                </form>
+                <div class="hero-proof-card">
+                    <div class="hero-proof-card__avatars" aria-hidden="true">@forelse ($professionals->take(3) as $professional)<x-ui.avatar :user="$professional->user" :src="$professional->profile_photo" :name="$professional->user?->name" size="sm" />@empty<span><i class="bi bi-person-fill"></i></span><span><i class="bi bi-person-fill"></i></span><span><i class="bi bi-person-fill"></i></span>@endforelse</div>
+                    <div><strong>{{ number_format($verifiedCount) }} profesionales</strong><small>verificados en Chambapp</small></div>
+                    <span class="hero-proof-card__divider" aria-hidden="true"></span>
+                    <div><strong><i class="bi bi-star-fill" aria-hidden="true"></i> {{ $averageRating !== null ? number_format((float) $averageRating, 1).'/5' : 'Sin reseñas' }}</strong><small>{{ $reviewCount > 0 ? number_format($reviewCount).' calificaciones reales' : 'Calificaciones verificadas' }}</small></div>
+                </div>
+                @if ($availableCount > 0)<div class="hero-availability"><span></span>{{ number_format($availableCount) }} profesionales disponibles cerca de ti</div>@endif
+            </div>
+        </div>
+        <div class="container hero-metrics" aria-label="Estadísticas de Chambapp">
+            <article><span class="hero-metric__icon hero-metric__icon--orange"><i class="bi bi-people" aria-hidden="true"></i></span><div><strong>{{ number_format($verifiedCount) }}</strong><small>Profesionales verificados</small></div></article>
+            <article><span class="hero-metric__icon hero-metric__icon--blue"><i class="bi bi-clipboard2-check" aria-hidden="true"></i></span><div><strong>{{ number_format($completedCount) }}</strong><small>Chambas completadas</small></div></article>
+            <article><span class="hero-metric__icon hero-metric__icon--yellow"><i class="bi bi-star" aria-hidden="true"></i></span><div><strong>{{ $averageRating !== null ? number_format((float) $averageRating, 1).'/5' : '—/5' }}</strong><small>Calificación promedio</small></div></article>
+            <article><span class="hero-metric__icon hero-metric__icon--green"><i class="bi bi-tools" aria-hidden="true"></i></span><div><strong>{{ number_format($serviceCount) }}</strong><small>Servicios disponibles</small></div></article>
+        </div>
     </section>
-
-    <section class="quick-benefits"><div class="container"><div class="row g-3"><div class="col-12 col-md-4"><div class="quick-benefit"><span class="quick-benefit__icon"><i class="bi bi-person-check"></i></span><div><strong>Profesionales verificados</strong><small>Perfiles verificados y calificaciones reales</small></div></div></div><div class="col-12 col-md-4"><div class="quick-benefit"><span class="quick-benefit__icon"><i class="bi bi-credit-card-2-front"></i></span><div><strong>Pagos seguros</strong><small>Paga de forma segura con Mercado Pago</small></div></div></div><div class="col-12 col-md-4"><div class="quick-benefit"><span class="quick-benefit__icon"><i class="bi bi-shield-check"></i></span><div><strong>Garantía Chambapp</strong><small>Tu satisfacción es nuestra prioridad</small></div></div></div></div></div></section>
 
     <section id="categorias" class="reference-section"><div class="container"><div class="reference-heading"><div><span class="reference-heading__eyebrow">Explora</span><h2>Categorías populares</h2><p>Encuentra profesionales en las categorías más solicitadas</p></div><a href="{{ route('marketplace.categories') }}">Ver todas <i class="bi bi-arrow-up-right"></i></a></div><div class="row g-3">@forelse ($categories as $category)<div class="col-6 col-md-4 col-lg-2"><a class="reference-category" href="{{ route('marketplace.category', $category) }}"><span><i class="bi bi-{{ $category->icon ?: 'grid' }}"></i></span><strong>{{ $category->name }}</strong><small>Profesionales cerca</small></a></div>@empty<div class="col-12"><x-ui.empty-state icon="grid" title="Categorías en preparación" description="Pronto podrás explorar servicios por categoría." /></div>@endforelse</div></div></section>
 

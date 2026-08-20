@@ -48,7 +48,11 @@ class JobWorkflowService
 
     public function finish(JobRequest $jobRequest): JobRequest
     {
-        $job = $this->transition($jobRequest, JobStatus::IN_PROGRESS, JobStatus::AWAITING_CONFIRMATION, ['finished_at' => now()]);
+        $job = $this->transition($jobRequest, JobStatus::IN_PROGRESS, JobStatus::AWAITING_CONFIRMATION, [
+            'finished_at' => now(),
+            'completion_code' => (string) random_int(100000, 999999),
+            'completion_code_expires_at' => now()->addHours(24),
+        ]);
         $job->client?->notify(new ChambappNotification(
             'job_awaiting_confirmation',
             'El profesional indicó que terminó el trabajo',
@@ -59,12 +63,19 @@ class JobWorkflowService
         return $job;
     }
 
-    public function confirmCompletion(JobRequest $jobRequest): JobRequest
+    public function confirmCompletion(JobRequest $jobRequest, string $completionCode): JobRequest
     {
-        return DB::transaction(function () use ($jobRequest): JobRequest {
+        return DB::transaction(function () use ($jobRequest, $completionCode): JobRequest {
             $job = $this->locked($jobRequest);
             $this->ensureStatus($job, JobStatus::AWAITING_CONFIRMATION, JobStatus::COMPLETED);
-            $job->forceFill(['status' => JobStatus::COMPLETED, 'completed_at' => now()])->save();
+            if (! $job->completion_code || $job->completion_code_expires_at?->isPast() || ! hash_equals((string) $job->completion_code, $completionCode)) {
+                throw new DomainException('El código de finalización no es válido o ya expiró.');
+            }
+            $job->forceFill([
+                'status' => JobStatus::COMPLETED,
+                'completed_at' => now(),
+                'completion_confirmed_at' => now(),
+            ])->save();
 
             $profile = $job->professional()->lockForUpdate()->firstOrFail();
             $profile->forceFill([

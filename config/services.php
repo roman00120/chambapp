@@ -41,6 +41,13 @@ return [
         'client_id' => env('MERCADOPAGO_CLIENT_ID'),
         'client_secret' => env('MERCADOPAGO_CLIENT_SECRET'),
         'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
+        'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
     ],
 
 ];

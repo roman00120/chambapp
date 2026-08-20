@@ -77,9 +77,10 @@ class JobWorkflowController extends Controller
     public function complete(Request $request, JobRequest $jobRequest, JobWorkflowService $workflow): RedirectResponse
     {
         $this->authorize('complete', $jobRequest);
+        $request->validate(['completion_code' => ['required', 'digits:6']]);
 
         try {
-            $workflow->confirmCompletion($jobRequest);
+            $workflow->confirmCompletion($jobRequest, (string) $request->input('completion_code'));
         } catch (DomainException $exception) {
             return back()->withErrors(['job' => $exception->getMessage()]);
         }
