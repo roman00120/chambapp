@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\JobStatus;
+use App\Enums\PaymentKind;
 use App\Enums\PaymentStatus;
 use App\Enums\QuoteStatus;
 use App\Enums\UserRole;
@@ -11,6 +12,11 @@ use App\Models\User;
 
 class JobRequestPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->role === UserRole::CLIENT;
+    }
+
     public function create(User $user, JobRequest $jobRequest): bool
     {
         return $user->role === UserRole::PROFESSIONAL
@@ -65,7 +71,10 @@ class JobRequestPolicy
     {
         return $this->paymentSummary($user, $jobRequest)
             && $jobRequest->professional?->isMercadoPagoConnected()
-            && ! $jobRequest->payments()->where('status', PaymentStatus::APPROVED->value)->exists();
+            && ! $jobRequest->payments()
+                ->where('kind', PaymentKind::JOB->value)
+                ->where('status', PaymentStatus::APPROVED->value)
+                ->exists();
     }
 
     public function complete(User $user, JobRequest $jobRequest): bool

@@ -101,4 +101,36 @@ class AccountFeaturesApiTest extends TestCase
         $this->postJson('/api/v1/notifications/'.$notification->id.'/read')->assertOk();
         $this->assertNotNull($notification->fresh()->read_at);
     }
+
+    public function test_professional_profile_validation_returns_clean_spanish_messages_and_supports_method_spoofing(): void
+    {
+        $owner = ProfessionalProfile::factory()->create();
+        Sanctum::actingAs($owner->user);
+
+        $failed = $this->post('/api/v1/professional/profile', [
+            '_method' => 'PATCH',
+        ], ['Accept' => 'application/json']);
+
+        $failed->assertStatus(422)
+            ->assertJsonValidationErrors(['name', 'phone', 'experience_years'])
+            ->assertJsonPath('errors.name.0', 'Escribe tu nombre.')
+            ->assertJsonPath('errors.phone.0', 'Escribe un número de teléfono.')
+            ->assertJsonPath('errors.experience_years.0', 'Indica tus años de experiencia.');
+
+        $updated = $this->post('/api/v1/professional/profile', [
+            '_method' => 'PATCH',
+            'name' => 'Gerardo Lc',
+            'phone' => '3327132663',
+            'experience_years' => 10,
+            'bio' => 'Electricista profesional',
+            'city' => 'Guadalajara',
+            'state' => 'Jalisco',
+            'postal_code' => '44100',
+        ], ['Accept' => 'application/json']);
+
+        $updated->assertOk()
+            ->assertJsonPath('data.name', 'Gerardo Lc')
+            ->assertJsonPath('data.experience_years', 10)
+            ->assertJsonPath('data.postal_code', '44100');
+    }
 }

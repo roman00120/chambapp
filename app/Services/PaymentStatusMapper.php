@@ -14,7 +14,9 @@ class PaymentStatusMapper
             'cancelled', 'cancelled_by_user' => PaymentStatus::CANCELLED,
             'refunded' => PaymentStatus::REFUNDED,
             'partially_refunded' => PaymentStatus::PARTIALLY_REFUNDED,
-            'in_process', 'pending', 'authorized', 'in_mediation' => PaymentStatus::PROCESSING,
+            'charged_back' => PaymentStatus::CHARGED_BACK,
+            'in_mediation' => PaymentStatus::IN_MEDIATION,
+            'in_process', 'pending', 'authorized' => PaymentStatus::PROCESSING,
             default => PaymentStatus::PROCESSING,
         };
     }

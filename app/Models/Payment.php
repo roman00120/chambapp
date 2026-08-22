@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentKind;
 use App\Enums\PaymentStatus;
 use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,11 +16,11 @@ class Payment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'job_request_id', 'client_id', 'professional_id', 'provider',
+        'job_request_id', 'client_id', 'professional_id', 'provider', 'kind',
         'external_payment_id', 'external_reference', 'currency', 'gross_amount',
         'platform_fee_percent', 'platform_fee', 'provider_fee', 'professional_amount',
-        'external_preference_id', 'checkout_url', 'status', 'tip_amount', 'tip_platform_fee', 'tip_professional_amount',
-        'paid_at', 'refunded_at',
+        'external_preference_id', 'checkout_url', 'checkout_expires_at', 'status', 'tip_amount', 'tip_platform_fee', 'tip_professional_amount',
+        'paid_at', 'refunded_at', 'refunded_amount', 'last_reconciled_at',
     ];
 
     protected function casts(): array
@@ -33,9 +34,13 @@ class Payment extends Model
             'tip_amount' => 'decimal:2',
             'tip_platform_fee' => 'decimal:2',
             'tip_professional_amount' => 'decimal:2',
+            'refunded_amount' => 'decimal:2',
+            'kind' => PaymentKind::class,
             'status' => PaymentStatus::class,
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',
+            'checkout_expires_at' => 'datetime',
+            'last_reconciled_at' => 'datetime',
         ];
     }
 

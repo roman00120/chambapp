@@ -26,6 +26,8 @@ npm run build
 
 Sube `public/build` junto con el código. Node no debe ejecutarse permanentemente en Hostinger.
 
+No subas `public/hot`: ese archivo pertenece exclusivamente al servidor de desarrollo y puede hacer que producción intente cargar assets desde `localhost`.
+
 ## Variables `.env`
 
 Copia `.env.example` a `.env` en el root privado y reemplaza los valores:
@@ -44,6 +46,8 @@ DB_USERNAME=<usuario>
 DB_PASSWORD=<secreto>
 SESSION_DRIVER=database
 SESSION_SECURE_COOKIE=true
+QUEUE_CONNECTION=database
+CACHE_STORE=database
 FILESYSTEM_DISK=public
 MAIL_MAILER=smtp
 MAIL_HOST=<smtp>
@@ -55,10 +59,55 @@ MAIL_FROM_ADDRESS=<correo-real>
 MERCADOPAGO_CLIENT_ID=<credencial-del-entorno-correcto>
 MERCADOPAGO_CLIENT_SECRET=<secreto-del-entorno-correcto>
 MERCADOPAGO_WEBHOOK_SECRET=<secreto-del-webhook>
+MERCADOPAGO_ACCESS_TOKEN=<token-de-la-cuenta-plataforma>
+MERCADOPAGO_USER_ID=<collector-id-de-la-cuenta-plataforma>
 CHAMBAPP_PLATFORM_FEE_PERCENT=15
+CHAMBAPP_PAYMENT_CURRENCY=MXN
+CHAMBAPP_PAYMENT_TIMEOUT=10
+CHAMBAPP_PAYMENT_PREFERENCE_HOURS=24
+CHAMBAPP_CORS_ALLOWED_ORIGINS=https://tu-dominio-real.example
 ```
 
 Genera `APP_KEY` una sola vez con `php artisan key:generate --force`. No reutilices la clave local ni subas `.env` al repositorio.
+
+## Verificación previa y despliegue
+
+Después de colocar `.env`, instalar dependencias y subir los assets compilados, ejecuta primero:
+
+```bash
+php artisan optimize:clear
+php artisan production:preflight
+```
+
+El comando no imprime secretos. Bloquea el despliegue si detecta, entre otros problemas, debug activo, HTTP/localhost, SQLite, cookies o colas inseguras, correo de prueba, credenciales incompletas de Mercado Pago, `public/hot`, assets faltantes o directorios sin permisos de escritura.
+
+Con el preflight aprobado, usa:
+
+```bash
+bash deploy.sh
+```
+
+El script limpia primero la caché de configuración para validar el `.env` efectivo. Si una migración, la generación de caché o el preflight de runtime falla después de activar mantenimiento, **el sitio permanece en mantenimiento** para no ejecutar código nuevo contra un esquema viejo o parcial. Restaura el release/esquema anterior o corrige el despliegue y ejecuta `php artisan up` de forma explícita.
+
+El preflight de runtime comprueba la conexión, las tablas y columnas críticas y que el backend de caché pueda adquirir un bloqueo atómico antes de reabrir tráfico. Esto no sustituye un despliegue por releases con rollback ni el smoke test HTTPS posterior.
+
+## Scheduler y cola (obligatorios para pagos)
+
+Configura un cron del servidor que ejecute cada minuto, con la ruta real del proyecto:
+
+```cron
+* * * * * cd /ruta/absoluta/chambapp && php artisan schedule:run >> /dev/null 2>&1
+```
+
+El scheduler reconcilia intentos de pago cada cinco minutos, vuelve a consultar pagos aprobados durante 180 días y renueva credenciales OAuth antes de vencer. Sin este cron, un webhook perdido puede dejar un pago pendiente.
+
+Mantén también un worker de cola supervisado y reiniciable:
+
+```bash
+php artisan queue:work --sleep=3 --tries=3 --timeout=90
+```
+
+Verifica ambos procesos después de desplegar con `php artisan schedule:list` y el panel/supervisor del worker. `deploy.sh` envía `queue:restart` para que los workers carguen el código nuevo.
 
 ## Base de datos y storage
 
@@ -113,14 +162,14 @@ La API se despliega en el mismo backend bajo `https://chambapp.mx/api/v1`. Ejecu
 
 Configura `CHAMBAPP_CORS_ALLOWED_ORIGINS` como una lista separada por comas de orígenes web autorizados. No uses `*` con credenciales. Las aplicaciones móviles nativas normalmente no dependen de CORS, pero siempre deben usar HTTPS y `Authorization: Bearer TOKEN`. No deshabilites CSRF global: las rutas Blade lo siguen necesitando.
 
-Después del despliegue ejecuta:
+Después del despliegue verifica la configuración efectiva y el endpoint de salud:
 
 ```bash
-php artisan optimize:clear
-php artisan migrate --force
-php artisan optimize
-php artisan test tests/Feature/Api/V1
+php artisan production:preflight
+curl --fail --show-error https://tu-dominio-real.example/health
 ```
+
+Ejecuta `php artisan test` en CI o antes de generar el artefacto, donde sí están instaladas las dependencias de desarrollo; el servidor se instala con `composer --no-dev`.
 
 Los límites específicos protegen login, registro, creación de trabajos, polling, aceptación, cotizaciones, checkout y workflow. Revisa que el proxy conserve los encabezados `Authorization`, `Origin` y `Accept`. No expongas HTTP en producción: un token transmitido sin TLS puede ser capturado.
 

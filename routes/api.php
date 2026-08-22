@@ -31,13 +31,16 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/favorites', [FavoriteController::class, 'index']);
             Route::post('/favorites/{professional}', [FavoriteController::class, 'store']);
             Route::delete('/favorites/{professional}', [FavoriteController::class, 'destroy']);
+            Route::get('/jobs', [JobController::class, 'index']);
             Route::post('/jobs/immediate', [JobController::class, 'immediate'])->middleware('throttle:api-jobs');
             Route::post('/jobs/scheduled', [JobController::class, 'scheduled'])->middleware('throttle:api-jobs');
+            Route::post('/jobs/{job}/dispute', [JobController::class, 'dispute'])->middleware('throttle:api-workflow');
         });
 
         Route::prefix('professional')->middleware('role:professional')->group(function (): void {
             Route::get('/profile', [ProfessionalController::class, 'profile']);
             Route::patch('/profile', [ProfessionalController::class, 'updateProfile']);
+            Route::get('/jobs', [ProfessionalController::class, 'jobs']);
             Route::get('/services', [ProfessionalController::class, 'services']);
             Route::post('/services', [ProfessionalController::class, 'storeService']);
             Route::get('/services/{service}', [ProfessionalController::class, 'showService']);

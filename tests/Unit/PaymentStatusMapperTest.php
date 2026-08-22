@@ -25,6 +25,8 @@ class PaymentStatusMapperTest extends TestCase
             ['cancelled', PaymentStatus::CANCELLED],
             ['refunded', PaymentStatus::REFUNDED],
             ['partially_refunded', PaymentStatus::PARTIALLY_REFUNDED],
+            ['charged_back', PaymentStatus::CHARGED_BACK],
+            ['in_mediation', PaymentStatus::IN_MEDIATION],
         ];
     }
 }

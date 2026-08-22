@@ -2,7 +2,10 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Enums\JobStatus;
+use App\Enums\PaymentKind;
 use App\Enums\PaymentStatus;
+use App\Models\JobRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,9 +16,21 @@ class JobRequestResource extends JsonResource
         $user = $request->user();
         $participant = $user && ($this->client_id === $user->id || $this->professional?->user_id === $user->id);
         $paid = $this->relationLoaded('payments')
-            ? $this->payments->contains(fn ($payment) => $payment->status === PaymentStatus::APPROVED)
-            : $this->payments()->where('status', PaymentStatus::APPROVED->value)->exists();
+            ? $this->payments->contains(fn ($payment) => $payment->kind === PaymentKind::JOB && $payment->status === PaymentStatus::APPROVED)
+            : $this->payments()
+                ->where('kind', PaymentKind::JOB->value)
+                ->where('status', PaymentStatus::APPROVED->value)
+                ->exists();
         $private = $participant && $paid;
+        $routeJob = $request->route('job');
+        $isDetailRequest = $routeJob instanceof JobRequest
+            && $routeJob->getKey() === $this->getKey();
+        $canSeeCompletionCode = $isDetailRequest
+            && $user?->isClient() === true
+            && $this->client_id === $user->getKey()
+            && $this->status === JobStatus::AWAITING_CONFIRMATION
+            && filled($this->completion_code)
+            && ($this->completion_code_expires_at === null || ! $this->completion_code_expires_at->isPast());
 
         return [
             'id' => $this->id,
@@ -42,6 +57,11 @@ class JobRequestResource extends JsonResource
             'search_expires_at' => $this->search_expires_at?->toIso8601String(),
             'quotes' => JobQuoteResource::collection($this->whenLoaded('quotes')),
             'payment' => new PaymentResource($this->whenLoaded('payment')),
+            'review' => $this->when(
+                $this->relationLoaded('review'),
+                fn () => $this->review ? new ReviewResource($this->review) : null,
+            ),
+            'completion_code' => $this->when($canSeeCompletionCode, (string) $this->completion_code),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

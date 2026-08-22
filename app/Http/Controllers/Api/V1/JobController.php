@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\JobStatus;
 use App\Exceptions\MercadoPagoException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreImmediateJobRequest;
 use App\Http\Requests\Api\V1\StoreScheduledJobRequest;
 use App\Http\Requests\RejectJobQuoteRequest;
+use App\Http\Requests\StoreJobDisputeRequest;
 use App\Http\Requests\StoreReviewRequest;
 use App\Http\Resources\Api\V1\JobQuoteResource;
 use App\Http\Resources\Api\V1\JobRequestResource;
 use App\Http\Resources\Api\V1\PaymentResource;
 use App\Http\Resources\Api\V1\ProfessionalResource;
 use App\Http\Resources\Api\V1\ReviewResource;
+use App\Models\JobDispute;
 use App\Models\JobQuote;
 use App\Models\JobRequest;
 use App\Models\Review;
@@ -25,9 +28,31 @@ use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class JobController extends Controller
 {
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $this->authorize('viewAny', JobRequest::class);
+        $validated = $request->validate([
+            'status' => ['nullable', Rule::enum(JobStatus::class)],
+        ]);
+
+        return JobRequestResource::collection(
+            JobRequest::query()
+                ->with(['category', 'service.category', 'service.coverImage', 'professional.user', 'payments', 'review.client'])
+                ->where('client_id', $request->user()->getKey())
+                ->when(
+                    $validated['status'] ?? null,
+                    fn ($query, string $status) => $query->where('status', $status),
+                )
+                ->latest()
+                ->paginate(15)
+                ->withQueryString(),
+        );
+    }
+
     public function immediate(StoreImmediateJobRequest $request, JobRequestService $jobs): JsonResponse
     {
         $job = $jobs->createImmediate($request->user(), $request->validated(), $request->file('photos', []));
@@ -51,7 +76,7 @@ class JobController extends Controller
     public function show(Request $request, JobRequest $job): JobRequestResource
     {
         $this->authorize('view', $job);
-        $job->load(['category', 'service.category', 'service.coverImage', 'professional.user', 'quotes', 'payment', 'payments']);
+        $job->load(['category', 'service.category', 'service.coverImage', 'professional.user', 'quotes', 'payment', 'payments', 'review.client']);
 
         return new JobRequestResource($job);
     }
@@ -176,6 +201,39 @@ class JobController extends Controller
             fn () => $workflow->confirmCompletion($job, (string) $data['completion_code']),
             'Trabajo confirmado como completado.',
         );
+    }
+
+    public function dispute(
+        StoreJobDisputeRequest $request,
+        JobRequest $job,
+        JobWorkflowService $workflow,
+    ): JsonResponse {
+        $this->authorize('create', [JobDispute::class, $job]);
+
+        try {
+            $workflow->openDispute(
+                $job,
+                $request->user(),
+                $request->validated('reason'),
+                $request->validated('description'),
+            );
+        } catch (DomainException $exception) {
+            return $this->domainError($exception, 'DISPUTE_UNAVAILABLE');
+        }
+
+        $job->refresh()->load([
+            'category',
+            'service.category',
+            'service.coverImage',
+            'professional.user',
+            'payment',
+            'payments',
+        ]);
+
+        return response()->json([
+            'data' => new JobRequestResource($job),
+            'message' => 'Tu reporte fue enviado y será revisado.',
+        ]);
     }
 
     public function review(

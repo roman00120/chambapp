@@ -16,6 +16,8 @@
         'approved' => ['Pago aprobado', 'success'],
         'refunded' => ['Reembolsado', 'neutral'],
         'partially_refunded' => ['Reembolso parcial', 'warning'],
+        'charged_back' => ['Contracargo', 'danger'],
+        'in_mediation' => ['En mediación', 'danger'],
         'cancelled' => ['Cancelado', 'danger'],
         'rejected' => ['Rechazado', 'danger'],
         'in_progress' => ['En proceso', 'info'],

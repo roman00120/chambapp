@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvitationStatus;
+use App\Enums\JobStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Professional\StoreServiceRequest;
 use App\Http\Requests\Professional\UpdateProfessionalProfileRequest;
@@ -27,6 +28,7 @@ use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class ProfessionalController extends Controller
 {
@@ -51,6 +53,27 @@ class ProfessionalController extends Controller
             $request->validated(),
             $request->file('profile_photo'),
         ));
+    }
+
+    public function jobs(Request $request, ProfessionalProfileService $profiles): AnonymousResourceCollection
+    {
+        $profile = $profiles->profileFor($request->user());
+        $this->authorize('view', $profile);
+        $validated = $request->validate([
+            'status' => ['nullable', Rule::enum(JobStatus::class)],
+        ]);
+
+        return JobRequestResource::collection(
+            $profile->jobRequests()
+                ->with(['category', 'service.category', 'service.coverImage', 'professional.user', 'payments', 'review.client'])
+                ->when(
+                    $validated['status'] ?? null,
+                    fn ($query, string $status) => $query->where('status', $status),
+                )
+                ->latest()
+                ->paginate(15)
+                ->withQueryString(),
+        );
     }
 
     public function services(Request $request, ProfessionalProfileService $profiles): AnonymousResourceCollection

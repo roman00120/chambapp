@@ -10,7 +10,9 @@ class RejectJobQuoteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('reject', $this->route('jobQuote')) === true;
+        $quote = $this->route('quote') ?? $this->route('jobQuote');
+
+        return $this->user()?->can('reject', $quote) === true;
     }
 
     public function rules(): array

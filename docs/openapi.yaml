@@ -203,6 +203,23 @@ paths:
       responses:
         '201': {description: Servicio creado}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /professional/jobs:
+    get:
+      tags: [Professional, Jobs]
+      summary: Trabajos paginados del profesional autenticado
+      security: [{bearerAuth: []}]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, searching, matched, awaiting_quote, accepted, rejected, awaiting_payment, paid, on_the_way, arrived, in_progress, awaiting_confirmation, completed, cancelled, expired, disputed]
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: Trabajos propios ordenados del más reciente al más antiguo; review contiene ReviewResource o null}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /professional/services/{service}:
     parameters: [{$ref: '#/components/parameters/ServiceId'}]
     get:
@@ -277,6 +294,23 @@ paths:
       responses:
         '200': {description: Invitación rechazada}
         '409': {$ref: '#/components/responses/Conflict'}
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: Trabajos paginados del cliente autenticado
+      security: [{bearerAuth: []}]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, searching, matched, awaiting_quote, accepted, rejected, awaiting_payment, paid, on_the_way, arrived, in_progress, awaiting_confirmation, completed, cancelled, expired, disputed]
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: Trabajos propios ordenados del más reciente al más antiguo; review contiene ReviewResource o null}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /jobs/immediate:
     post:
       tags: [Jobs]
@@ -311,7 +345,11 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/JobId'}]
       responses:
-        '200': {description: Trabajo serializado según rol y pago}
+        '200':
+          description: Trabajo serializado según rol y pago. completion_code se omite salvo para el cliente propietario, exclusivamente durante awaiting_confirmation y mientras siga vigente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/JobDetailResponse'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
   /jobs/{job}/status:
@@ -365,6 +403,11 @@ paths:
       summary: Cliente propietario rechaza cotización
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/JobId'}, {$ref: '#/components/parameters/QuoteId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QuoteRejectInput'}
       responses:
         '200': {description: Cotización rechazada}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -428,6 +471,22 @@ paths:
           application/json:
             schema: {type: object, required: [completion_code], properties: {completion_code: {type: string, pattern: '^[0-9]{6}$'}}}
       responses: {'200': {description: completed}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /jobs/{job}/dispute:
+    post:
+      tags: [Jobs]
+      summary: Cliente propietario reporta un problema sin modificar ni reembolsar el pago
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DisputeInput'}
+      responses:
+        '200': {description: JobRequestResource con estado disputed; la descripción privada no se expone}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: DISPUTE_UNAVAILABLE por conflicto concurrente de dominio}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /jobs/{job}/review:
     post:
       tags: [Jobs]
@@ -443,9 +502,12 @@ paths:
   /notifications:
     get:
       tags: [Notifications]
-      summary: Notificaciones propias paginadas
+      summary: Notificaciones propias paginadas con unread_count global real
       security: [{bearerAuth: []}]
-      responses: {'200': {description: Notificaciones}}
+      parameters: [{in: query, name: page, schema: {type: integer, minimum: 1}}]
+      responses:
+        '200':
+          description: NotificationResource paginado; meta.unread_count cuenta todas las no leídas del usuario, no solo la página actual
   /notifications/{notification}/read:
     post:
       tags: [Notifications]
@@ -500,6 +562,45 @@ components:
         message: {type: string}
         code: {type: string}
         errors: {type: object, additionalProperties: true}
+    JobDetailResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id: {type: integer}
+            status: {type: string}
+            completion_code:
+              type: string
+              pattern: '^[0-9]{6}$'
+              description: Campo condicional, exclusivo del cliente propietario durante awaiting_confirmation y mientras el código esté vigente. Se omite para profesionales, terceros y colecciones.
+            review:
+              nullable: true
+              allOf: [{$ref: '#/components/schemas/Review'}]
+              description: ReviewResource del Job o null; no contiene contacto, Payment ni metadata de moderación.
+    Review:
+      type: object
+      properties:
+        id: {type: integer}
+        rating: {type: integer, minimum: 1, maximum: 5}
+        comment: {type: string, nullable: true}
+        client_name: {type: string}
+        created_at: {type: string, format: date-time}
+    Notification:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, nullable: true}
+        title: {type: string, nullable: true}
+        message: {type: string, nullable: true, description: data.body actual o data.message como fallback histórico}
+        destination:
+          nullable: true
+          description: Destino interno allowlisted; nunca una URL externa arbitraria.
+          oneOf:
+            - {type: object, properties: {kind: {type: string, enum: [job]}, id: {type: integer}}}
+            - {type: object, properties: {kind: {type: string, enum: [professional]}, id: {type: integer}}}
+        read_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
     RegisterInput:
       type: object
       required: [name, email, phone, role, password, password_confirmation, device_name]
@@ -591,3 +692,17 @@ components:
       properties:
         amount: {type: string, pattern: '^\d+(\.\d{1,2})?$'}
         description: {type: string, maxLength: 300}
+    QuoteRejectInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [price_high, changed_need, no_longer_needed, other]}
+        reason_detail: {type: string, maxLength: 140, nullable: true, description: Requerido cuando reason es other}
+    DisputeInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          enum: [incomplete_work, not_as_agreed, damage_or_issue, professional_absent, other]
+        description: {type: string, maxLength: 1000, nullable: true}

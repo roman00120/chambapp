@@ -13,7 +13,11 @@ class NotificationController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        return NotificationResource::collection($request->user()->notifications()->latest()->paginate(20));
+        $unreadCount = $request->user()->unreadNotifications()->count();
+
+        return NotificationResource::collection(
+            $request->user()->notifications()->latest()->paginate(20),
+        )->additional(['meta' => ['unread_count' => $unreadCount]]);
     }
 
     public function read(Request $request, DatabaseNotification $notification): JsonResponse

@@ -18,6 +18,7 @@ class ProfessionalResource extends JsonResource
             'experience_years' => $this->experience_years,
             'city' => $this->city,
             'state' => $this->state,
+            'postal_code' => $this->postal_code,
             'rating' => (string) $this->average_rating,
             'total_reviews' => $this->total_reviews,
             'completed_jobs' => $this->total_completed_jobs,

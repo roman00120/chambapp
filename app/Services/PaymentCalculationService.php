@@ -40,6 +40,21 @@ class PaymentCalculationService
         return $this->formatUnits($this->parseUnits((string) $amount, 2));
     }
 
+    public function sum(iterable $amounts): string
+    {
+        $total = 0;
+        foreach ($amounts as $amount) {
+            $total += $this->parseUnits((string) $amount, 2);
+        }
+
+        return $this->formatUnits($total);
+    }
+
+    public function isAtMost(string|int $amount, string|int $maximum): bool
+    {
+        return $this->parseUnits((string) $amount, 2) <= $this->parseUnits((string) $maximum, 2);
+    }
+
     public function formatAmount(string|int $amount): string
     {
         [$whole, $cents] = explode('.', $this->normalize($amount));

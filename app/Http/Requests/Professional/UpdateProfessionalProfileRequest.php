@@ -41,11 +41,17 @@ class UpdateProfessionalProfileRequest extends FormRequest
     {
         return [
             'name.required' => 'Escribe tu nombre.',
+            'name.string' => 'El nombre no es válido.',
+            'name.max' => 'El nombre no puede superar los 100 caracteres.',
             'phone.required' => 'Escribe un número de teléfono.',
             'phone.regex' => 'Ingresa un número de teléfono válido.',
             'bio.max' => 'La descripción no puede superar los 2,000 caracteres.',
+            'experience_years.required' => 'Indica tus años de experiencia.',
+            'experience_years.integer' => 'Los años de experiencia deben ser un número entero.',
             'experience_years.min' => 'Los años de experiencia no pueden ser negativos.',
             'experience_years.max' => 'Los años de experiencia no pueden superar 60.',
+            'city.max' => 'La ciudad no puede superar los 100 caracteres.',
+            'state.max' => 'El estado no puede superar los 100 caracteres.',
             'postal_code.regex' => 'Ingresa un código postal válido.',
             'profile_photo.mimetypes' => 'El archivo seleccionado no es una imagen válida.',
             'profile_photo.max' => 'La imagen supera el tamaño permitido de 2 MB.',

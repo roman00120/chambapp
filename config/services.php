@@ -42,6 +42,7 @@ return [
         'client_secret' => env('MERCADOPAGO_CLIENT_SECRET'),
         'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
         'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
+        'user_id' => env('MERCADOPAGO_USER_ID'),
     ],
 
     'google' => [

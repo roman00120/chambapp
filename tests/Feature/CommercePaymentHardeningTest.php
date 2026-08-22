@@ -1,0 +1,236 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Exceptions\MercadoPagoException;
+use App\Models\CommerceOrder;
+use App\Models\ProfessionalProfile;
+use App\Models\Service;
+use App\Services\CommerceService;
+use App\Services\MercadoPagoService;
+use App\Services\PaymentCalculationService;
+use DomainException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Testing\TestResponse;
+use Mockery;
+use Tests\TestCase;
+
+class CommercePaymentHardeningTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_identical_pending_order_is_reused(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        $commerce = $this->commerceWith(Mockery::mock(MercadoPagoService::class));
+
+        $first = $commerce->createFeaturedOrder($professional, $service, 7);
+        $same = $commerce->createFeaturedOrder($professional, $service, 7);
+        $different = $commerce->createFeaturedOrder($professional, $service, 1);
+
+        $this->assertSame($first->getKey(), $same->getKey());
+        $this->assertNotSame($first->getKey(), $different->getKey());
+        $this->assertDatabaseCount('commerce_orders', 2);
+    }
+
+    public function test_checkout_reuses_the_saved_provider_preference(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('createPlatformPreference')
+            ->once()
+            ->withArgs(fn (string $title, string $amount, string $reference): bool => $title === 'featured-7'
+                && $amount === '199.00'
+                && $reference !== '')
+            ->andReturn(['id' => 'pref-commerce-1', 'url' => 'https://sandbox.mercadopago.test/commerce/1']);
+        $commerce = $this->commerceWith($provider);
+        $order = $commerce->createFeaturedOrder($professional, $service, 7);
+
+        $first = $commerce->checkout($order);
+        $second = $commerce->checkout($order);
+
+        $this->assertSame('pref-commerce-1', $first->external_preference_id);
+        $this->assertSame($first->checkout_url, $second->checkout_url);
+        $this->assertDatabaseCount('commerce_orders', 1);
+    }
+
+    public function test_failed_checkout_can_resume_the_same_order(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        $attempts = 0;
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('createPlatformPreference')
+            ->twice()
+            ->andReturnUsing(function () use (&$attempts): array {
+                $attempts++;
+                if ($attempts === 1) {
+                    throw new MercadoPagoException('Temporalmente no disponible.');
+                }
+
+                return ['id' => 'pref-retry', 'url' => 'https://sandbox.mercadopago.test/commerce/retry'];
+            });
+        $commerce = $this->commerceWith($provider);
+        $order = $commerce->createFeaturedOrder($professional, $service, 7);
+
+        try {
+            $commerce->checkout($order);
+            $this->fail('The first checkout should fail.');
+        } catch (MercadoPagoException) {
+            $this->assertNull($order->fresh()->checkout_url);
+        }
+
+        $same = $commerce->createFeaturedOrder($professional, $service, 7);
+        $resumed = $commerce->checkout($same);
+
+        $this->assertSame($order->getKey(), $same->getKey());
+        $this->assertSame('pref-retry', $resumed->external_preference_id);
+        $this->assertDatabaseCount('commerce_orders', 1);
+    }
+
+    public function test_paid_featured_orders_accumulate_days_and_each_order_applies_once(): void
+    {
+        $this->travelTo(Carbon::parse('2026-08-21 12:00:00'));
+        [$professional, $service] = $this->professionalAndService();
+        $commerce = $this->commerceWith(Mockery::mock(MercadoPagoService::class));
+        $sevenDays = $commerce->createFeaturedOrder($professional, $service, 7);
+        $oneDay = $commerce->createFeaturedOrder($professional, $service, 1);
+
+        $commerce->applyPaidOrder($sevenDays);
+        $commerce->applyPaidOrder($oneDay);
+        $commerce->applyPaidOrder($sevenDays);
+
+        $service->refresh();
+        $this->assertTrue($service->is_featured);
+        $this->assertSame('2026-08-29 12:00:00', $service->featured_until?->format('Y-m-d H:i:s'));
+        $this->assertSame('approved', $sevenDays->fresh()->status);
+        $this->assertSame('approved', $oneDay->fresh()->status);
+    }
+
+    public function test_customization_is_applied_atomically_and_only_to_the_order_owner(): void
+    {
+        [$professional] = $this->professionalAndService();
+        $commerce = $this->commerceWith(Mockery::mock(MercadoPagoService::class));
+        $order = $commerce->createCustomizationOrder($professional, 'theme-sunset');
+
+        $commerce->applyPaidOrder($order);
+        $commerce->applyPaidOrder($order);
+
+        $this->assertSame('sunset', $professional->fresh()->profile_theme);
+        $this->assertSame('approved', $order->fresh()->status);
+        $this->assertNotNull($order->fresh()->paid_at);
+    }
+
+    public function test_inactive_service_and_malformed_store_item_cannot_be_charged(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        $commerce = $this->commerceWith(Mockery::mock(MercadoPagoService::class));
+        $service->forceFill(['is_active' => false])->save();
+
+        try {
+            $commerce->createFeaturedOrder($professional, $service, 7);
+            $this->fail('An inactive service should not create an order.');
+        } catch (DomainException) {
+            $this->assertDatabaseCount('commerce_orders', 0);
+        }
+
+        config(['chambapp.commerce.store_items.broken' => [
+            'kind' => 'unsupported',
+            'name' => 'Broken',
+            'price' => '49.00',
+            'value' => 'broken',
+        ]]);
+
+        $this->expectException(DomainException::class);
+        $commerce->createCustomizationOrder($professional, 'broken');
+    }
+
+    public function test_valid_platform_webhook_fulfills_order_only_with_matching_financial_data(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        config([
+            'services.mercadopago.webhook_secret' => 'webhook-secret',
+            'services.mercadopago.user_id' => 'platform-collector',
+        ]);
+        $order = $this->commerceWith(Mockery::mock(MercadoPagoService::class))
+            ->createFeaturedOrder($professional, $service, 7);
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('getPlatformPayment')->once()->andReturn($this->platformPayment($order, 'approved'));
+        $this->app->instance(MercadoPagoService::class, $provider);
+
+        $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-valid')->assertOk();
+
+        $this->assertSame('approved', $order->fresh()->status);
+        $this->assertTrue($service->fresh()->is_featured);
+    }
+
+    public function test_platform_webhook_with_wrong_collector_is_acknowledged_but_not_fulfilled(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        config([
+            'services.mercadopago.webhook_secret' => 'webhook-secret',
+            'services.mercadopago.user_id' => 'platform-collector',
+        ]);
+        $order = $this->commerceWith(Mockery::mock(MercadoPagoService::class))
+            ->createFeaturedOrder($professional, $service, 7);
+        $providerData = $this->platformPayment($order, 'approved');
+        $providerData['collector_id'] = 'another-collector';
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('getPlatformPayment')->once()->andReturn($providerData);
+        $this->app->instance(MercadoPagoService::class, $provider);
+
+        $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-wrong-collector')->assertOk();
+
+        $this->assertSame('pending', $order->fresh()->status);
+        $this->assertFalse($service->fresh()->is_featured);
+    }
+
+    private function professionalAndService(): array
+    {
+        $professional = ProfessionalProfile::factory()->create();
+        $service = Service::factory()->create(['professional_id' => $professional->getKey()]);
+
+        return [$professional, $service];
+    }
+
+    private function commerceWith(MercadoPagoService $provider): CommerceService
+    {
+        return new CommerceService(
+            $provider,
+            app(PaymentCalculationService::class),
+            app(\App\Services\PaymentStatusMapper::class),
+        );
+    }
+
+    private function platformPayment(CommerceOrder $order, string $status): array
+    {
+        return [
+            'id' => 'mp-commerce-valid',
+            'status' => $status,
+            'external_reference' => $order->external_reference,
+            'transaction_amount' => (string) $order->amount,
+            'currency_id' => $order->currency,
+            'collector_id' => 'platform-collector',
+            'live_mode' => app()->environment('production'),
+        ];
+    }
+
+    private function postSignedPlatformWebhook(string $paymentId, string $eventId): TestResponse
+    {
+        $requestId = 'request-'.$eventId;
+        $timestamp = (string) now()->timestamp;
+        $manifest = 'id:'.$paymentId.';request-id:'.$requestId.';ts:'.$timestamp.';';
+        $signature = hash_hmac('sha256', $manifest, 'webhook-secret');
+
+        return $this->postJson(route('webhooks.mercadopago').'?data.id='.$paymentId, [
+            'id' => $eventId,
+            'type' => 'payment',
+            'action' => 'payment.updated',
+            'user_id' => 'platform-collector',
+            'data' => ['id' => $paymentId],
+        ], [
+            'x-signature' => 'ts='.$timestamp.',v1='.$signature,
+            'x-request-id' => $requestId,
+        ]);
+    }
+}
