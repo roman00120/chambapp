@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\UserRole;
-use App\Enums\UserStatus;
-use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterUserRequest;
-use App\Models\ProfessionalProfile;
-use App\Models\User;
+use App\Services\UserRegistrationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -21,30 +16,10 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-    public function store(RegisterUserRequest $request): RedirectResponse
+    public function store(RegisterUserRequest $request, UserRegistrationService $registrations): RedirectResponse
     {
         $data = $request->validated();
-        $role = UserRole::from($data['account_type']);
-
-        $user = DB::transaction(function () use ($data, $role): User {
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'password' => $data['password'],
-                'role' => $role,
-                'status' => UserStatus::ACTIVE,
-            ]);
-
-            if ($role === UserRole::PROFESSIONAL) {
-                ProfessionalProfile::create([
-                    'user_id' => $user->id,
-                    'verification_status' => VerificationStatus::UNVERIFIED,
-                ]);
-            }
-
-            return $user;
-        });
+        $user = $registrations->register($data);
 
         Auth::login($user);
         $request->session()->regenerate();

@@ -14,6 +14,16 @@ class EnsureUserIsActive
         $user = $request->user();
 
         if ($user && ! $user->isActive()) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                $user->currentAccessToken()?->delete();
+
+                return response()->json([
+                    'message' => 'Tu cuenta no se encuentra disponible actualmente.',
+                    'errors' => (object) [],
+                    'code' => 'ACCOUNT_UNAVAILABLE',
+                ], 403);
+            }
+
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

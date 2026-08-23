@@ -14,7 +14,7 @@
 .mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 1030; display: flex; padding: .45rem .35rem calc(.45rem + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid var(--chambapp-border); box-shadow: 0 -.35rem 1rem rgba(24,37,31,.06); }
 .mobile-bottom-nav__item { display: flex; min-height: 3.25rem; min-width: 0; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: .22rem; padding: .35rem .15rem; color: var(--chambapp-muted-text); border-radius: .6rem; font-size: .65rem; font-weight: 750; text-decoration: none; }
 .mobile-bottom-nav__item i { font-size: 1.1rem; line-height: 1; }
-.mobile-bottom-nav__item:hover, .mobile-bottom-nav__item:focus-visible, .mobile-bottom-nav__item.is-active { color: var(--chambapp-primary); background: #edf5df; }
+.mobile-bottom-nav__item:hover, .mobile-bottom-nav__item:focus-visible, .mobile-bottom-nav__item.is-active { color: var(--chambapp-primary); background: #fff1cc; }
 .app-shell main { padding-bottom: 5.25rem; }
 .app-shell .site-footer { padding-bottom: 4.5rem; }
 .public-shell .site-footer { margin-top: 0; }

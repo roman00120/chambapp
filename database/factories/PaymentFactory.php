@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PaymentKind;
 use App\Enums\PaymentStatus;
 use App\Models\JobRequest;
 use App\Models\Payment;
@@ -21,6 +22,7 @@ class PaymentFactory extends Factory
             'client_id' => User::factory()->client(),
             'professional_id' => ProfessionalProfile::factory(),
             'provider' => null,
+            'kind' => PaymentKind::JOB,
             'external_payment_id' => null,
             'external_reference' => 'CHAMB-'.fake()->unique()->numerify('######'),
             'currency' => 'MXN',

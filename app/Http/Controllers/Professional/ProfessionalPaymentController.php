@@ -7,8 +7,11 @@ use App\Exceptions\MercadoPagoException;
 use App\Http\Controllers\Controller;
 use App\Models\ProfessionalProfile;
 use App\Services\MercadoPagoService;
+use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProfessionalPaymentController extends Controller
@@ -51,17 +54,38 @@ class ProfessionalPaymentController extends Controller
 
         try {
             $credentials = $mercadoPago->exchangeAuthorizationCode((string) $request->query('code'), $receivedState);
-            $profile = $this->profileFor($request);
-            $profile->forceFill([
-                'mercadopago_user_id' => (string) data_get($credentials, 'user_id'),
-                'mercadopago_access_token' => (string) data_get($credentials, 'access_token'),
-                'mercadopago_refresh_token' => (string) data_get($credentials, 'refresh_token'),
-                'mercadopago_public_key' => data_get($credentials, 'public_key'),
-                'mercadopago_token_expires_at' => now()->addSeconds((int) data_get($credentials, 'expires_in', 0)),
-                'mercadopago_connected_at' => now(),
-            ])->save();
+            $sellerId = (string) data_get($credentials, 'user_id');
+            if ($sellerId === '') {
+                throw new MercadoPagoException('Mercado Pago no devolvió una cuenta de vendedor.');
+            }
+            DB::transaction(function () use ($request, $credentials, $sellerId): void {
+                $profile = ProfessionalProfile::query()
+                    ->lockForUpdate()
+                    ->findOrFail($this->profileFor($request)->getKey());
+                $sellerBelongsToAnotherProfile = ProfessionalProfile::query()
+                    ->where('mercadopago_user_id', $sellerId)
+                    ->where('id', '!=', $profile->getKey())
+                    ->exists();
+                if ($sellerBelongsToAnotherProfile) {
+                    throw new DomainException('Esta cuenta de Mercado Pago ya está vinculada a otro profesional.');
+                }
+                $profile->forceFill([
+                    'mercadopago_user_id' => $sellerId,
+                    'mercadopago_access_token' => (string) data_get($credentials, 'access_token'),
+                    'mercadopago_refresh_token' => (string) data_get($credentials, 'refresh_token'),
+                    'mercadopago_public_key' => data_get($credentials, 'public_key'),
+                    'mercadopago_token_expires_at' => now()->addSeconds((int) data_get($credentials, 'expires_in', 0)),
+                    'mercadopago_connected_at' => now(),
+                ])->save();
+            });
         } catch (MercadoPagoException) {
             return redirect()->route('professional.payments.settings')->withErrors(['payment' => 'No pudimos completar la conexión con Mercado Pago.']);
+        } catch (DomainException $exception) {
+            return redirect()->route('professional.payments.settings')->withErrors(['payment' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return redirect()->route('professional.payments.settings')->withErrors(['payment' => 'La cuenta de Mercado Pago ya está vinculada o no pudo guardarse de forma segura.']);
         }
 
         return redirect()->route('professional.payments.settings')->with('status', 'Mercado Pago conectado correctamente.');

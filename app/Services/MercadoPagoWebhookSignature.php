@@ -23,7 +23,14 @@ class MercadoPagoWebhookSignature
         $requestId = (string) $request->header('x-request-id', '');
         $dataId = (string) ($request->query('data.id') ?: data_get($request->input('data'), 'id', ''));
 
-        if (! filled($timestamp) || ! filled($provided)) {
+        if (! filled($timestamp) || ! ctype_digit((string) $timestamp) || ! filled($provided)) {
+            return false;
+        }
+        $timestampSeconds = (int) $timestamp;
+        if ($timestampSeconds > 9999999999) {
+            $timestampSeconds = intdiv($timestampSeconds, 1000);
+        }
+        if (abs(now()->timestamp - $timestampSeconds) > 300) {
             return false;
         }
 

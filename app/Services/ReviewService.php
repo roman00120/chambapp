@@ -16,6 +16,8 @@ class ReviewService
 
     public function create(JobRequest $jobRequest, User $client, int $rating, ?string $comment = null): Review
     {
+        $comment = filled($comment) ? trim((string) $comment) : null;
+
         return DB::transaction(function () use ($jobRequest, $client, $rating, $comment): Review {
             $job = JobRequest::query()
                 ->with(['professional.user', 'service'])

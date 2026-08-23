@@ -98,11 +98,11 @@ class OnDemandMatchingService
             if ($profile->user_id !== $professional->getKey() || ! $profile->canReceiveImmediateJobs()) {
                 throw new DomainException('Ya no puedes aceptar esta chamba.');
             }
-            if (! in_array($lockedInvitation->status, [InvitationStatus::PENDING, InvitationStatus::VIEWED], true) || $lockedInvitation->isExpired()) {
-                throw new DomainException('Esta invitación ya no está disponible.');
-            }
             if ($job->status !== JobStatus::SEARCHING || $job->professional_id !== null) {
                 throw new DomainException('La chamba ya fue tomada por otro profesional.');
+            }
+            if (! in_array($lockedInvitation->status, [InvitationStatus::PENDING, InvitationStatus::VIEWED], true) || $lockedInvitation->isExpired()) {
+                throw new DomainException('Esta invitación ya no está disponible.');
             }
             if ($job->latitude === null || $job->longitude === null) {
                 throw new DomainException('La solicitud no tiene una ubicación válida.');

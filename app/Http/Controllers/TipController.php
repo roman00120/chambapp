@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\MercadoPagoException;
 use App\Http\Requests\StoreTipRequest;
 use App\Models\JobRequest;
 use App\Services\PaymentService;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
-use App\Exceptions\MercadoPagoException;
 
 class TipController extends Controller
 {

@@ -5,6 +5,7 @@ return [
         'currency' => env('CHAMBAPP_PAYMENT_CURRENCY', 'MXN'),
         'platform_fee_percent' => env('CHAMBAPP_PLATFORM_FEE_PERCENT', '15'),
         'checkout_timeout' => (int) env('CHAMBAPP_PAYMENT_TIMEOUT', 10),
+        'preference_lifetime_hours' => (int) env('CHAMBAPP_PAYMENT_PREFERENCE_HOURS', 24),
         'provider' => 'mercadopago',
     ],
     'commerce' => [

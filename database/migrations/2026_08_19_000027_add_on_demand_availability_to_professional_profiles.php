@@ -29,6 +29,7 @@ return new class extends Migration
         }
         if (Schema::getConnection()->getDriverName() !== 'mysql') {
             Schema::table('professional_profiles', fn (Blueprint $table) => $table->index(['is_available', 'availability_status', 'location_updated_at'], 'profiles_availability_freshness_idx'));
+
             return;
         }
         $hasAvailabilityIndex = DB::table('information_schema.statistics')

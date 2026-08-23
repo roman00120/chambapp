@@ -51,6 +51,9 @@ class UserController extends Controller
         $status = UserStatus::from($request->validated('status'));
         $previous = $user->status->value;
         $user->forceFill(['status' => $status])->save();
+        if ($status !== UserStatus::ACTIVE) {
+            $user->tokens()->delete();
+        }
         $audit->record($request->user(), 'user.status_changed', $user, ['from' => $previous, 'to' => $status->value], $request);
 
         return back()->with('status', match ($status) {

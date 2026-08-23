@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\JobStatus;
+use App\Enums\PaymentKind;
 use App\Enums\ServiceMode;
 use App\Services\PaymentCalculationService;
 use Database\Factories\JobRequestFactory;
@@ -99,7 +100,10 @@ class JobRequest extends Model
 
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class)->latestOfMany();
+        return $this->hasOne(Payment::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('kind', PaymentKind::JOB->value),
+        );
     }
 
     public function payments(): HasMany
@@ -109,7 +113,17 @@ class JobRequest extends Model
 
     public function approvedPayment(): HasOne
     {
-        return $this->hasOne(Payment::class)->where('status', 'approved');
+        return $this->hasOne(Payment::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query
+                ->where('kind', PaymentKind::JOB->value)
+                ->where('status', 'approved'),
+        );
+    }
+
+    public function tips(): HasMany
+    {
+        return $this->hasMany(Payment::class)->where('kind', PaymentKind::TIP->value);
     }
 
     public function review(): HasOne

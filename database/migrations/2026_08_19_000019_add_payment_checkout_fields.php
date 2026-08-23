@@ -25,6 +25,7 @@ return new class extends Migration
                 $table->unique('external_reference');
                 $table->decimal('provider_fee', 12, 2)->nullable()->default(null)->change();
             });
+
             return;
         }
 

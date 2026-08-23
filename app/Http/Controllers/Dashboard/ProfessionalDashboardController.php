@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Enums\JobStatus;
+use App\Enums\PaymentKind;
 use App\Enums\PaymentStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
@@ -30,7 +31,11 @@ class ProfessionalDashboardController extends Controller
             'completedJobsCount' => $profile->jobRequests()->where('status', JobStatus::COMPLETED)->count(),
             'rating' => $profile->total_reviews > 0 ? number_format((float) $profile->average_rating, 1) : 'Nuevo',
             'totalReviews' => $profile->total_reviews,
-            'paidJobsCount' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->count(),
+            'paidJobsCount' => $profile->payments()
+                ->where('kind', PaymentKind::JOB->value)
+                ->where('status', PaymentStatus::APPROVED->value)
+                ->distinct()
+                ->count('job_request_id'),
             'grossRevenue' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('gross_amount'),
             'platformFees' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('platform_fee'),
             'professionalRevenue' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('professional_amount'),

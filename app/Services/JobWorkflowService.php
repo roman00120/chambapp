@@ -158,7 +158,7 @@ class JobWorkflowService
             if ($job->professional?->user_id !== $professional->getKey()) {
                 throw new DomainException('No puedes cotizar este trabajo.');
             }
-            if (! in_array($job->status, [JobStatus::PENDING, JobStatus::ACCEPTED, JobStatus::MATCHED], true)) {
+            if (! in_array($job->status, [JobStatus::PENDING, JobStatus::ACCEPTED, JobStatus::MATCHED, JobStatus::AWAITING_QUOTE], true)) {
                 throw new DomainException('Este trabajo ya no acepta nuevas cotizaciones.');
             }
 
