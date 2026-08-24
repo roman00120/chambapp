@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 class OnDemandMatchingService
 {
-    public function __construct(private readonly GeoDistanceService $distance) {}
+    public function __construct(
+        private readonly GeoDistanceService $distance,
+        private readonly ProfessionalIdentityVerificationService $identityVerification,
+    ) {}
 
     public function startSearch(JobRequest $job): JobRequest
     {
@@ -94,6 +97,8 @@ class OnDemandMatchingService
             $lockedInvitation = JobInvitation::query()->lockForUpdate()->findOrFail($invitation->getKey());
             $job = JobRequest::query()->lockForUpdate()->findOrFail($lockedInvitation->job_request_id);
             $profile = ProfessionalProfile::query()->with('user')->lockForUpdate()->findOrFail($lockedInvitation->professional_id);
+
+            $this->identityVerification->ensureProfessionalCanAcceptJobs($profile);
 
             if ($profile->user_id !== $professional->getKey() || ! $profile->canReceiveImmediateJobs()) {
                 throw new DomainException('Ya no puedes aceptar esta chamba.');
@@ -232,8 +237,9 @@ class OnDemandMatchingService
             ->whereHas('user', fn ($query) => $query->where('status', UserStatus::ACTIVE->value)->where('role', UserRole::PROFESSIONAL->value))
             ->whereHas('services', fn ($query) => $query->active()->where('category_id', $categoryId))
             ->whereDoesntHave('jobRequests', fn ($query) => $query->whereIn('status', array_map(fn (JobStatus $status) => $status->value, $activeJobStatuses)))
-            ->whereDoesntHave('invitations', fn ($query) => $query->where('job_request_id', $job->getKey())->whereIn('status', [InvitationStatus::PENDING->value, InvitationStatus::VIEWED->value, InvitationStatus::ACCEPTED->value]))
-            ->get();
+            ->whereDoesntHave('invitations', fn ($query) => $query->where('job_request_id', $job->getKey())->whereIn('status', [InvitationStatus::PENDING->value, InvitationStatus::VIEWED->value, InvitationStatus::ACCEPTED->value]));
+
+        $candidates = $this->identityVerification->applyOperationalEligibility($candidates)->get();
 
         foreach ($candidates as $candidate) {
             $distance = $this->distance->distanceKm((float) $job->latitude, (float) $job->longitude, (float) $candidate->last_latitude, (float) $candidate->last_longitude);

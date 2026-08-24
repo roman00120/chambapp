@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\CommerceFulfillmentException;
 use App\Models\CommerceOrder;
 use App\Models\Payment;
 use App\Models\ProfessionalProfile;
 use App\Services\CommerceService;
 use App\Services\MercadoPagoService;
 use App\Services\MercadoPagoWebhookSignature;
-use App\Services\PaymentCalculationService;
 use App\Services\PaymentService;
-use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +23,6 @@ class MercadoPagoWebhookController extends Controller
         MercadoPagoService $mercadoPago,
         PaymentService $payments,
         CommerceService $commerce,
-        PaymentCalculationService $calculation,
     ): JsonResponse {
         if (! $signature->isValid($request, config('services.mercadopago.webhook_secret'))) {
             Log::warning('Mercado Pago webhook signature rejected', [
@@ -69,41 +67,31 @@ class MercadoPagoWebhookController extends Controller
         }
 
         $reference = (string) data_get($providerData, 'external_reference');
+        $safePayload = [
+            'type' => (string) $request->input('type'),
+            'action' => (string) $request->input('action'),
+            'event_id' => (string) $request->input('id'),
+            'provider_payment_id' => $providerPaymentId,
+            'provider_status' => (string) data_get($providerData, 'status'),
+            'provider_reference_present' => $reference !== '',
+        ];
         $commerceOrder = CommerceOrder::query()->with(['professional', 'service'])->where('external_reference', $reference)->first();
         if ($commerceOrder) {
             try {
-                $amountMatches = filled(data_get($providerData, 'transaction_amount'))
-                    && $calculation->sameAmount((string) data_get($providerData, 'transaction_amount'), (string) $commerceOrder->amount);
-            } catch (DomainException) {
-                $amountMatches = false;
-            }
-            $providerLiveMode = filter_var(data_get($providerData, 'live_mode'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-            $expectedCollector = (string) config('services.mercadopago.user_id');
-            $commerceDataMatches = $amountMatches
-                && strtoupper((string) data_get($providerData, 'currency_id')) === strtoupper((string) $commerceOrder->currency)
-                && $providerLiveMode !== null
-                && $providerLiveMode === app()->environment('production')
-                && $expectedCollector !== ''
-                && filled(data_get($providerData, 'collector_id'))
-                && hash_equals($expectedCollector, (string) data_get($providerData, 'collector_id'));
-            if (! $commerceDataMatches) {
-                Log::warning('Mercado Pago commerce webhook data mismatch', [
+                $commerce->applyProviderPayment(
+                    $commerceOrder,
+                    $providerData,
+                    (string) $request->input('id', $providerPaymentId),
+                    $safePayload,
+                );
+            } catch (CommerceFulfillmentException $exception) {
+                Log::error('Mercado Pago commerce fulfillment will be retried', [
                     'commerce_order_id' => $commerceOrder->getKey(),
                     'provider_payment_id' => $providerPaymentId,
+                    'exception' => $exception::class,
                 ]);
 
-                return response()->json(['received' => true]);
-            }
-            if (strtolower((string) data_get($providerData, 'status')) === 'approved') {
-                try {
-                    $commerce->applyPaidOrder($commerceOrder);
-                } catch (DomainException $exception) {
-                    Log::critical('Paid commerce order could not be fulfilled', [
-                        'commerce_order_id' => $commerceOrder->getKey(),
-                        'provider_payment_id' => $providerPaymentId,
-                        'reason' => $exception->getMessage(),
-                    ]);
-                }
+                return response()->json(['message' => 'Fulfillment pending retry.'], 503);
             }
 
             return response()->json(['received' => true]);
@@ -130,14 +118,6 @@ class MercadoPagoWebhookController extends Controller
             return response()->json(['received' => true]);
         }
 
-        $safePayload = [
-            'type' => (string) $request->input('type'),
-            'action' => (string) $request->input('action'),
-            'event_id' => (string) $request->input('id'),
-            'provider_payment_id' => $providerPaymentId,
-            'provider_status' => (string) data_get($providerData, 'status'),
-            'provider_reference_present' => $reference !== '',
-        ];
         $payments->applyProviderPayment($payment, $providerData, (string) $request->input('id', $providerPaymentId), $safePayload);
 
         return response()->json(['received' => true]);

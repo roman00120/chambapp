@@ -7,6 +7,8 @@ use DomainException;
 
 class ProfessionalAvailabilityService
 {
+    public function __construct(private readonly ProfessionalIdentityVerificationService $identityVerification) {}
+
     public function update(ProfessionalProfile $profile, array $data): ProfessionalProfile
     {
         $updates = [
@@ -25,6 +27,10 @@ class ProfessionalAvailabilityService
         if ($updates['is_available'] && ($profile->last_latitude === null || $profile->last_longitude === null)
             && ! isset($updates['last_latitude'], $updates['last_longitude'])) {
             throw new DomainException('Comparte tu ubicación antes de activar disponibilidad.');
+        }
+
+        if ($updates['is_available']) {
+            $this->identityVerification->ensureProfessionalCanAcceptJobs($profile);
         }
 
         $profile->forceFill($updates)->save();

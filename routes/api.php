@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProfessionalController;
+use App\Http\Controllers\Api\V1\ProfessionalIdentityVerificationController;
 use App\Http\Controllers\Api\V1\PublicController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,7 @@ Route::prefix('v1')->group(function (): void {
         });
 
         Route::prefix('professional')->middleware('role:professional')->group(function (): void {
+            Route::get('/identity-verification', [ProfessionalIdentityVerificationController::class, 'show']);
             Route::get('/profile', [ProfessionalController::class, 'profile']);
             Route::patch('/profile', [ProfessionalController::class, 'updateProfile']);
             Route::get('/jobs', [ProfessionalController::class, 'jobs']);

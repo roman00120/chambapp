@@ -12,18 +12,24 @@ use Illuminate\Database\Query\Expression;
 
 class ServiceSearchService
 {
+    public function __construct(private readonly ProfessionalIdentityVerificationService $identityVerification) {}
+
     public function search(array $filters): LengthAwarePaginator
     {
         $query = Service::query()
             ->active()
             ->whereHas('category', fn (Builder $category) => $category->where('is_active', true))
-            ->whereHas('professional', fn (Builder $profile) => $profile->where('verification_status', VerificationStatus::VERIFIED->value))
+            ->whereHas('professional', function (Builder $profile): void {
+                $profile->where('verification_status', VerificationStatus::VERIFIED->value);
+                $this->identityVerification->applyOperationalEligibility($profile);
+            })
             ->whereHas('professional.user', fn (Builder $user) => $user
                 ->where('status', UserStatus::ACTIVE->value)
                 ->where('role', UserRole::PROFESSIONAL->value))
             ->with([
                 'category:id,name,slug,icon',
                 'professional:id,user_id,bio,city,state,verification_status,profile_photo,average_rating,total_reviews,total_completed_jobs',
+                'professional.identityVerification:id,professional_id,status,expires_at',
                 'professional.user:id,name,status,role',
                 'coverImage:id,service_id,path,alt_text,sort_order,is_cover',
             ]);
@@ -84,7 +90,9 @@ class ServiceSearchService
         }
 
         if (filter_var($filters['verified'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            $query->whereHas('professional', fn (Builder $profile) => $profile->where('verification_status', VerificationStatus::VERIFIED->value));
+            $query->whereHas('professional.identityVerification', fn (Builder $verification) => $verification
+                ->where('status', \App\Enums\IdentityVerificationStatus::VERIFIED->value)
+                ->where(fn (Builder $expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', now())));
         }
     }
 

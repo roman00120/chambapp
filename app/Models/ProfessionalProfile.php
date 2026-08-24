@@ -68,6 +68,21 @@ class ProfessionalProfile extends Model
         return $this->belongsTo(User::class, 'verified_by');
     }
 
+    public function identityVerification(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ProfessionalIdentityVerification::class, 'professional_id');
+    }
+
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(ProfessionalCredential::class, 'professional_id');
+    }
+
+    public function hasVerifiedIdentity(): bool
+    {
+        return app(\App\Services\ProfessionalIdentityVerificationService::class)->hasVerifiedIdentity($this);
+    }
+
     public function services(): HasMany
     {
         return $this->hasMany(Service::class, 'professional_id');
@@ -151,10 +166,10 @@ class ProfessionalProfile extends Model
     public function verificationLabel(): string
     {
         return match ($this->verification_status) {
-            VerificationStatus::PENDING => 'Verificación pendiente',
-            VerificationStatus::VERIFIED => 'Verificado',
-            VerificationStatus::REJECTED => 'Verificación rechazada',
-            default => 'No verificado',
+            VerificationStatus::PENDING => 'Revisión de perfil pendiente',
+            VerificationStatus::VERIFIED => 'Perfil habilitado',
+            VerificationStatus::REJECTED => 'Perfil rechazado',
+            default => 'Perfil sin revisar',
         };
     }
 

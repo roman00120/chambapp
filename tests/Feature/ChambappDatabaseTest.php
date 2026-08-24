@@ -41,6 +41,18 @@ class ChambappDatabaseTest extends TestCase
         $this->assertTrue(Schema::hasColumns('services', ['price', 'price_type', 'deleted_at']));
         $this->assertTrue(Schema::hasColumns('payments', ['gross_amount', 'platform_fee', 'professional_amount']));
         $this->assertTrue(Schema::hasColumns('payments', ['platform_fee_percent', 'external_preference_id', 'checkout_url']));
+        $this->assertTrue(Schema::hasColumns('job_requests', [
+            'economic_model_version', 'base_amount', 'client_service_fee_percent',
+            'client_service_fee', 'professional_commission_percent',
+            'professional_commission', 'customer_total', 'platform_gross_fee',
+            'professional_amount_before_external_costs',
+        ]));
+        $this->assertTrue(Schema::hasColumns('payments', [
+            'economic_model_version', 'base_amount', 'client_service_fee_percent',
+            'client_service_fee', 'professional_commission_percent',
+            'professional_commission', 'customer_total', 'platform_gross_fee',
+            'professional_amount_before_external_costs',
+        ]));
         $this->assertTrue(Schema::hasColumns('professional_profiles', ['mercadopago_user_id', 'mercadopago_access_token', 'mercadopago_refresh_token']));
     }
 

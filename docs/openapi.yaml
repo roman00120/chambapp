@@ -249,6 +249,17 @@ paths:
       responses:
         '200': {description: Servicio eliminado}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /professional/identity-verification:
+    get:
+      tags: [Professional]
+      summary: Consultar el estado propio de verificación de identidad
+      description: Sólo lectura. No expone documentos, biometría ni referencias privadas del proveedor.
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Estado mínimo de identidad, vigencia y elegibilidad operativa
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /professional/availability:
     get:
       tags: [Professional]
@@ -267,6 +278,7 @@ paths:
             schema: {$ref: '#/components/schemas/AvailabilityInput'}
       responses:
         '200': {description: Disponibilidad actualizada}
+        '403': {description: IDENTITY_VERIFICATION_REQUIRED cuando la función esté activa}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /professional/job-invitations:
@@ -284,6 +296,7 @@ paths:
       parameters: [{$ref: '#/components/parameters/InvitationId'}]
       responses:
         '200': {description: Profesional ganador}
+        '403': {description: IDENTITY_VERIFICATION_REQUIRED cuando la función esté activa}
         '409': {description: 'JOB_ALREADY_TAKEN, PROFESSIONAL_BUSY o LOCATION_STALE'}
   /professional/job-invitations/{invitation}/decline:
     post:
@@ -415,11 +428,11 @@ paths:
   /jobs/{job}/checkout:
     post:
       tags: [Payments]
-      summary: Preparar checkout de Mercado Pago usando agreed_price
+      summary: Preparar checkout con el snapshot económico congelado al aceptar la cotización
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/JobId'}]
       responses:
-        '200': {description: checkout_url y cálculo del servidor}
+        '200': {description: checkout_url y Payment con desglose oficial; Flutter no envía montos ni porcentajes}
         '403': {$ref: '#/components/responses/Forbidden'}
         '409': {description: PAYMENT_REQUIRED o proveedor no disponible}
   /payments/{payment}:
@@ -429,7 +442,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/PaymentId'}]
       responses:
-        '200': {description: 'Montos decimales y estado, sin secretos ni payloads'}
+        '200': {description: 'Desglose económico según el actor y estado, sin secretos ni payloads'}
         '403': {$ref: '#/components/responses/Forbidden'}
   /jobs/{job}/on-the-way:
     post:
@@ -578,6 +591,24 @@ components:
               nullable: true
               allOf: [{$ref: '#/components/schemas/Review'}]
               description: ReviewResource del Job o null; no contiene contacto, Payment ni metadata de moderación.
+            economic_breakdown:
+              nullable: true
+              allOf: [{$ref: '#/components/schemas/EconomicBreakdown'}]
+              description: Snapshot V2 congelado al aceptar la cotización. Sus campos dependen del rol autenticado.
+    EconomicBreakdown:
+      type: object
+      required: [economic_model_version, base_amount, currency]
+      properties:
+        economic_model_version: {type: string, enum: [client_15_professional_15]}
+        base_amount: {type: string, pattern: '^\d+\.\d{2}$'}
+        client_service_fee_percent: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para cliente y admin.}
+        client_service_fee: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para cliente y admin.}
+        professional_commission_percent: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para profesional y admin.}
+        professional_commission: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para profesional y admin.}
+        customer_total: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para cliente y admin.}
+        platform_gross_fee: {type: string, pattern: '^\d+\.\d{2}$', description: Visible sólo para admin.}
+        professional_amount_before_external_costs: {type: string, pattern: '^\d+\.\d{2}$', description: Visible para profesional y admin; no es neto fiscal ni liquidación garantizada.}
+        currency: {type: string, enum: [MXN]}
     Review:
       type: object
       properties:

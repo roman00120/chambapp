@@ -19,6 +19,9 @@ class HomeController extends Controller
         try {
             $verifiedProfessionals = ProfessionalProfile::query()
                 ->where('verification_status', VerificationStatus::VERIFIED)
+                ->whereHas('identityVerification', fn ($query) => $query
+                    ->where('status', \App\Enums\IdentityVerificationStatus::VERIFIED->value)
+                    ->where(fn ($expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', now())))
                 ->whereHas('user', fn ($query) => $query
                     ->where('status', UserStatus::ACTIVE)
                     ->where('role', UserRole::PROFESSIONAL));
@@ -46,7 +49,7 @@ class HomeController extends Controller
                     ->limit(3)
                     ->get(),
                 'services' => (clone $activeServices)
-                    ->with(['category', 'professional.user', 'coverImage'])
+                    ->with(['category', 'professional.user', 'professional.identityVerification', 'coverImage'])
                     ->latest()
                     ->limit(3)
                     ->get(),

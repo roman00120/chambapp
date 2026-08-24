@@ -40,6 +40,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Professional\ProfessionalPaymentController;
 use App\Http\Controllers\Professional\ProfessionalProfileController;
+use App\Http\Controllers\Professional\ProfessionalIdentityVerificationController;
 use App\Http\Controllers\Professional\ProfessionalServiceController;
 use App\Http\Controllers\Professional\ServiceImageController;
 use App\Http\Controllers\ProfessionalEarningsController;
@@ -160,6 +161,7 @@ Route::middleware(['auth', 'active', 'role:professional'])
     ->name('professional.')
     ->group(function () {
         Route::get('/inicio', ProfessionalDashboardController::class)->name('dashboard');
+        Route::get('/verificacion-identidad', ProfessionalIdentityVerificationController::class)->name('identity-verification.show');
         Route::get('/chambas', [ProfessionalOpportunityController::class, 'index'])->name('opportunities');
         Route::get('/chambas/estado', [ProfessionalOpportunityController::class, 'status'])->middleware('throttle:workflow')->name('opportunities.status');
         Route::post('/chambas/{invitation}/aceptar', [ProfessionalOpportunityController::class, 'accept'])->middleware('throttle:workflow')->name('opportunities.accept');

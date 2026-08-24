@@ -28,7 +28,8 @@ class CommissionController extends Controller
             'gross' => $money->formatAmount((string) $query->sum('gross_amount')),
             'fees' => $money->formatAmount((string) $query->sum('platform_fee')),
             'professionalAmount' => $money->formatAmount((string) $query->sum('professional_amount')),
-            'currentPercent' => config('chambapp.payments.platform_fee_percent', '15'),
+            'clientFeePercent' => config('chambapp.payments.client_service_fee_percent', '15'),
+            'professionalCommissionPercent' => config('chambapp.payments.professional_commission_percent', '15'),
         ]);
     }
 }

@@ -321,14 +321,16 @@ class ProductionPreflight extends Command
 
     private function hasValidPaymentConfiguration(): bool
     {
-        $fee = config('chambapp.payments.platform_fee_percent');
+        $fees = [
+            config('chambapp.payments.platform_fee_percent'),
+            config('chambapp.payments.client_service_fee_percent'),
+            config('chambapp.payments.professional_commission_percent'),
+        ];
         $timeout = config('chambapp.payments.checkout_timeout');
         $preferenceHours = config('chambapp.payments.preference_lifetime_hours');
 
         return config('chambapp.payments.currency') === 'MXN'
-            && is_numeric($fee)
-            && (float) $fee >= 0
-            && (float) $fee <= 100
+            && collect($fees)->every(fn (mixed $fee): bool => is_numeric($fee) && (float) $fee >= 0 && (float) $fee <= 100)
             && is_numeric($timeout)
             && (int) $timeout > 0
             && is_numeric($preferenceHours)

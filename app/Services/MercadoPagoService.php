@@ -49,9 +49,9 @@ class MercadoPagoService
                 'title' => Str::limit((string) ($payment->jobRequest->service?->title ?? $payment->jobRequest->title), 120),
                 'quantity' => 1,
                 'currency_id' => $payment->currency,
-                'unit_price' => (float) $payment->gross_amount,
+                'unit_price' => (float) ($payment->customer_total ?? $payment->gross_amount),
             ]],
-            'marketplace_fee' => (float) $payment->platform_fee,
+            'marketplace_fee' => (float) ($payment->platform_gross_fee ?? $payment->platform_fee),
             'external_reference' => $payment->external_reference,
             'back_urls' => [
                 'success' => route('payments.return.success'),

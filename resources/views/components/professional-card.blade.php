@@ -5,7 +5,7 @@
 @endphp
 
 <article {{ $attributes->merge(['class' => 'marketplace-professional-card']) }}>
-    <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><x-ui.avatar :user="$professional->user" :src="$professional->profile_photo" :name="$professional->user?->name" size="lg" />@if ($professional->verification_status?->value === 'verified')<x-ui.badge variant="verified" label="Verificado" dot />@endif</div>
+    <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><x-ui.avatar :user="$professional->user" :src="$professional->profile_photo" :name="$professional->user?->name" size="lg" />@if ($professional->hasVerifiedIdentity())<x-ui.badge variant="verified" label="Identidad verificada" dot />@endif</div>
     <h2 class="marketplace-professional-card__name"><a href="{{ route('professional.public-profile', $professional) }}">{{ $professional->user?->name ?? 'Profesional Chambapp' }}</a></h2>
     <p class="marketplace-professional-card__location"><i class="bi bi-geo-alt" aria-hidden="true"></i> {{ collect([$professional->city, $professional->state])->filter()->join(', ') ?: 'Cerca de ti' }}</p>
     <p class="marketplace-professional-card__bio">{{ $professional->bio ?: 'Profesional listo para ayudarte.' }}</p>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\JobStatus;
 use App\Exceptions\MercadoPagoException;
+use App\Exceptions\IdentityVerificationRequiredException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreImmediateJobRequest;
 use App\Http\Requests\Api\V1\StoreScheduledJobRequest;
@@ -266,6 +267,10 @@ class JobController extends Controller
 
     private function domainError(DomainException $exception, string $code): JsonResponse
     {
-        return response()->json(['message' => $exception->getMessage(), 'errors' => (object) [], 'code' => $code], 409);
+        if ($exception instanceof IdentityVerificationRequiredException) {
+            $code = 'IDENTITY_VERIFICATION_REQUIRED';
+        }
+
+        return response()->json(['message' => $exception->getMessage(), 'errors' => (object) [], 'code' => $code], $exception instanceof IdentityVerificationRequiredException ? 403 : 409);
     }
 }

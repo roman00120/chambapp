@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentStatus;
 use App\Exceptions\MercadoPagoException;
 use App\Models\CommerceOrder;
 use App\Models\ProfessionalProfile;
@@ -9,6 +10,7 @@ use App\Models\Service;
 use App\Services\CommerceService;
 use App\Services\MercadoPagoService;
 use App\Services\PaymentCalculationService;
+use App\Services\PaymentStatusMapper;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -155,13 +157,46 @@ class CommercePaymentHardeningTest extends TestCase
         $order = $this->commerceWith(Mockery::mock(MercadoPagoService::class))
             ->createFeaturedOrder($professional, $service, 7);
         $provider = Mockery::mock(MercadoPagoService::class);
-        $provider->shouldReceive('getPlatformPayment')->once()->andReturn($this->platformPayment($order, 'approved'));
+        $provider->shouldReceive('getPlatformPayment')->twice()->andReturn($this->platformPayment($order, 'approved'));
         $this->app->instance(MercadoPagoService::class, $provider);
 
         $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-valid')->assertOk();
+        $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-valid')->assertOk();
 
-        $this->assertSame('approved', $order->fresh()->status);
+        $order->refresh();
+        $this->assertSame('approved', $order->status);
+        $this->assertSame(PaymentStatus::APPROVED, $order->financial_status);
+        $this->assertSame('mp-commerce-valid', $order->external_payment_id);
+        $this->assertSame(1, $order->events()->where('event_type', 'webhook.received')->count());
+        $this->assertSame(1, $order->events()->where('event_type', 'fulfillment.completed')->count());
         $this->assertTrue($service->fresh()->is_featured);
+    }
+
+    public function test_platform_webhook_moves_refunded_order_to_review_without_reapplying_fulfillment(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+        config([
+            'services.mercadopago.webhook_secret' => 'webhook-secret',
+            'services.mercadopago.user_id' => 'platform-collector',
+        ]);
+        $order = $this->commerceWith(Mockery::mock(MercadoPagoService::class))
+            ->createFeaturedOrder($professional, $service, 7);
+        $approved = $this->platformPayment($order, 'approved');
+        $refunded = $this->platformPayment($order, 'refunded');
+        $refunded['transaction_amount_refunded'] = (string) $order->amount;
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('getPlatformPayment')->twice()->andReturn($approved, $refunded);
+        $this->app->instance(MercadoPagoService::class, $provider);
+
+        $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-approved')->assertOk();
+        $this->postSignedPlatformWebhook('mp-commerce-valid', 'commerce-refunded')->assertOk();
+
+        $order->refresh();
+        $this->assertSame('review', $order->status);
+        $this->assertSame(PaymentStatus::REFUNDED, $order->financial_status);
+        $this->assertSame((string) $order->amount, (string) $order->refunded_amount);
+        $this->assertSame(1, $order->events()->where('event_type', 'fulfillment.completed')->count());
+        $this->assertSame(1, $order->events()->where('event_type', 'payment.requires_review')->count());
     }
 
     public function test_platform_webhook_with_wrong_collector_is_acknowledged_but_not_fulfilled(): void
@@ -198,7 +233,7 @@ class CommercePaymentHardeningTest extends TestCase
         return new CommerceService(
             $provider,
             app(PaymentCalculationService::class),
-            app(\App\Services\PaymentStatusMapper::class),
+            app(PaymentStatusMapper::class),
         );
     }
 

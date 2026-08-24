@@ -31,6 +31,34 @@ class JobRequestResource extends JsonResource
             && $this->status === JobStatus::AWAITING_CONFIRMATION
             && filled($this->completion_code)
             && ($this->completion_code_expires_at === null || ! $this->completion_code_expires_at->isPast());
+        $isClient = $this->client_id === $user?->getKey();
+        $isProfessional = $this->professional?->user_id === $user?->getKey();
+        $isAdmin = $user?->isAdmin() === true;
+        $economicBreakdown = null;
+        if ($this->economic_model_version === 'client_15_professional_15') {
+            $economicBreakdown = [
+                'economic_model_version' => $this->economic_model_version,
+                'base_amount' => (string) $this->base_amount,
+                'currency' => config('chambapp.payments.currency'),
+            ];
+            if ($isClient || $isAdmin) {
+                $economicBreakdown += [
+                    'client_service_fee_percent' => (string) $this->client_service_fee_percent,
+                    'client_service_fee' => (string) $this->client_service_fee,
+                    'customer_total' => (string) $this->customer_total,
+                ];
+            }
+            if ($isProfessional || $isAdmin) {
+                $economicBreakdown += [
+                    'professional_commission_percent' => (string) $this->professional_commission_percent,
+                    'professional_commission' => (string) $this->professional_commission,
+                    'professional_amount_before_external_costs' => (string) $this->professional_amount_before_external_costs,
+                ];
+            }
+            if ($isAdmin) {
+                $economicBreakdown['platform_gross_fee'] = (string) $this->platform_gross_fee;
+            }
+        }
 
         return [
             'id' => $this->id,
@@ -52,6 +80,7 @@ class JobRequestResource extends JsonResource
             'scheduled_slot' => $this->scheduled_slot,
             'agreed_price' => $this->agreed_price !== null ? (string) $this->agreed_price : null,
             'currency' => config('chambapp.payments.currency'),
+            'economic_breakdown' => $economicBreakdown,
             'search_round' => $this->search_round,
             'search_radius_km' => $this->search_radius_km !== null ? (string) $this->search_radius_km : null,
             'search_expires_at' => $this->search_expires_at?->toIso8601String(),

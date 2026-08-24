@@ -26,10 +26,11 @@ class UserRegistrationService
             ]);
 
             if ($role === UserRole::PROFESSIONAL) {
-                ProfessionalProfile::create([
+                $profile = ProfessionalProfile::create([
                     'user_id' => $user->id,
                     'verification_status' => VerificationStatus::UNVERIFIED,
                 ]);
+                $profile->identityVerification()->create(['status' => \App\Enums\IdentityVerificationStatus::NOT_STARTED]);
             }
 
             return $user->load('professionalProfile');

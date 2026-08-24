@@ -19,7 +19,7 @@ class ProfessionalController extends Controller
         $search = $request->string('q')->toString();
         $verification = $request->string('verification')->toString();
         $professionals = ProfessionalProfile::query()
-            ->with('user')
+            ->with(['user', 'identityVerification'])
             ->withCount(['services as active_services_count' => fn ($query) => $query->where('is_active', true), 'jobRequests as completed_jobs_count' => fn ($query) => $query->where('status', 'completed')])
             ->when($search, fn ($query) => $query->whereHas('user', fn ($user) => $user->where('name', 'like', '%'.$search.'%')->orWhere('email', 'like', '%'.$search.'%'))->orWhere('city', 'like', '%'.$search.'%'))
             ->when($verification, fn ($query) => $query->where('verification_status', $verification))
@@ -32,7 +32,7 @@ class ProfessionalController extends Controller
 
     public function show(ProfessionalProfile $professional): View
     {
-        $professional->load(['user', 'verifiedBy', 'services.category', 'reviews' => fn ($query) => $query->visible()->with('client')->latest()->limit(10), 'jobRequests.client', 'jobRequests.service', 'payments.jobRequest']);
+        $professional->load(['user', 'verifiedBy', 'identityVerification', 'credentials.category', 'services.category', 'reviews' => fn ($query) => $query->visible()->with('client')->latest()->limit(10), 'jobRequests.client', 'jobRequests.service', 'payments.jobRequest']);
 
         return view('admin.professionals.show', compact('professional'));
     }
@@ -55,11 +55,13 @@ class ProfessionalController extends Controller
             'verified_at' => now(),
             'verification_rejection_reason' => $status === VerificationStatus::REJECTED ? $request->validated('reason') : null,
         ])->save();
+        // Keep the historical audit action name for compatibility; this mutation is
+        // profile moderation only and never changes identity verification records.
         $audit->record($request->user(), 'professional.verification_'.$status->value, $professional, ['reason' => $request->validated('reason')], $request);
         $professional->user?->notify(new ChambappNotification(
             'professional_verification_'.$status->value,
             $status === VerificationStatus::VERIFIED ? 'Perfil profesional aprobado' : 'Perfil profesional rechazado',
-            $status === VerificationStatus::VERIFIED ? 'Tu perfil ya puede mostrarse como verificado.' : 'Tu perfil requiere ajustes antes de ser verificado.',
+            $status === VerificationStatus::VERIFIED ? 'Tu perfil fue habilitado. Esto no significa que tu identidad esté verificada.' : 'Tu perfil requiere ajustes antes de habilitarse.',
             route('professional.profile.show'),
         ));
 

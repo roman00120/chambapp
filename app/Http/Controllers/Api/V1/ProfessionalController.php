@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvitationStatus;
 use App\Enums\JobStatus;
+use App\Exceptions\IdentityVerificationRequiredException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Professional\StoreServiceRequest;
 use App\Http\Requests\Professional\UpdateProfessionalProfileRequest;
@@ -232,10 +233,14 @@ class ProfessionalController extends Controller
 
     private function domainError(DomainException $exception, string $code): JsonResponse
     {
+        if ($exception instanceof IdentityVerificationRequiredException) {
+            $code = 'IDENTITY_VERIFICATION_REQUIRED';
+        }
+
         return response()->json([
             'message' => $exception->getMessage(),
             'errors' => (object) [],
             'code' => $code,
-        ], 409);
+        ], $exception instanceof IdentityVerificationRequiredException ? 403 : 409);
     }
 }

@@ -15,6 +15,7 @@ use App\Models\Category;
 use App\Models\ProfessionalProfile;
 use App\Models\Service;
 use App\Services\ServiceSearchService;
+use App\Services\ProfessionalIdentityVerificationService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PublicController extends Controller
@@ -34,10 +35,11 @@ class PublicController extends Controller
         return ServiceResource::collection($search->search($filters));
     }
 
-    public function service(Service $service): ServiceResource
+    public function service(Service $service, ProfessionalIdentityVerificationService $identityVerification): ServiceResource
     {
         $service->load(['category', 'professional.user', 'images', 'coverImage']);
         abort_unless($service->is_active && $service->category?->is_active && $service->professional?->isPubliclyVisible(), 404);
+        abort_unless($identityVerification->professionalCanAcceptJobs($service->professional), 404);
 
         return new ServiceResource($service);
     }
@@ -46,6 +48,7 @@ class PublicController extends Controller
     {
         $professional->load([
             'user',
+            'identityVerification',
             'services' => fn ($query) => $query->active()->with(['category', 'coverImage'])->latest(),
             'reviews' => fn ($query) => $query->visible()->with('client')->latest()->limit(10),
         ]);

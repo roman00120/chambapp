@@ -142,7 +142,11 @@ class AdminController extends Controller
     private function professionalData(ProfessionalProfile $profile): array
     {
         return ['id' => $profile->id, 'user_id' => $profile->user_id, 'name' => $profile->user?->name,
-            'email' => $profile->user?->email, 'city' => $profile->city, 'verification_status' => $profile->verification_status->value,
+            'email' => $profile->user?->email, 'city' => $profile->city,
+            'verification_status' => $profile->verification_status->value,
+            'profile_review_status' => $profile->verification_status->value,
+            'identity_verification_status' => app(\App\Services\ProfessionalIdentityVerificationService::class)->statusFor($profile)->value,
+            'identity_verified' => $profile->hasVerifiedIdentity(),
             'active_services_count' => (int) ($profile->active_services_count ?? 0), 'rejection_reason' => $profile->verification_rejection_reason];
     }
 }

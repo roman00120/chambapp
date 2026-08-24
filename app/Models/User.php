@@ -76,6 +76,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasOne(ProfessionalProfile::class);
     }
 
+    public function reviewedIdentityVerifications(): HasMany
+    {
+        return $this->hasMany(ProfessionalIdentityVerification::class, 'reviewed_by');
+    }
+
     public function jobRequests(): HasMany
     {
         return $this->hasMany(JobRequest::class, 'client_id');

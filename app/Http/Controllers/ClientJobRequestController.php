@@ -86,6 +86,7 @@ class ClientJobRequestController extends Controller
         return $service->is_active
             && $service->category?->is_active === true
             && $service->professional?->verification_status === VerificationStatus::VERIFIED
+            && app(\App\Services\ProfessionalIdentityVerificationService::class)->professionalCanAcceptJobs($service->professional)
             && $service->professional?->user?->status === UserStatus::ACTIVE
             && $service->professional?->user?->role === UserRole::PROFESSIONAL;
     }

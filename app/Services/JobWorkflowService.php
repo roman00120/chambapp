@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class JobWorkflowService
 {
-    public function __construct(private readonly PaymentCalculationService $paymentCalculation) {}
+    public function __construct(
+        private readonly PaymentCalculationService $paymentCalculation,
+        private readonly ProfessionalIdentityVerificationService $identityVerification,
+    ) {}
 
     public function reject(JobRequest $jobRequest): JobRequest
     {
@@ -33,16 +36,22 @@ class JobWorkflowService
 
     public function start(JobRequest $jobRequest): JobRequest
     {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
+
         return $this->transition($jobRequest, [JobStatus::PAID, JobStatus::ARRIVED], JobStatus::IN_PROGRESS, ['started_at' => now()]);
     }
 
     public function onTheWay(JobRequest $jobRequest): JobRequest
     {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
+
         return $this->transition($jobRequest, JobStatus::PAID, JobStatus::ON_THE_WAY, ['on_the_way_at' => now()]);
     }
 
     public function arrive(JobRequest $jobRequest): JobRequest
     {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
+
         return $this->transition($jobRequest, JobStatus::ON_THE_WAY, JobStatus::ARRIVED, ['arrived_at' => now()]);
     }
 
@@ -153,6 +162,8 @@ class JobWorkflowService
 
     public function createQuote(JobRequest $jobRequest, User $professional, string $amount, string $description): JobQuote
     {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($professional);
+
         return DB::transaction(function () use ($jobRequest, $professional, $amount, $description): JobQuote {
             $job = $this->locked($jobRequest);
             if ($job->professional?->user_id !== $professional->getKey()) {
@@ -195,6 +206,8 @@ class JobWorkflowService
             throw new DomainException('Esta cotización ya expiró.');
         }
 
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($jobQuote->jobRequest?->professional);
+
         return DB::transaction(function () use ($jobQuote, $client): JobQuote {
             $quote = JobQuote::query()->with(['jobRequest.client', 'jobRequest.professional.user', 'jobRequest.service'])->lockForUpdate()->findOrFail($jobQuote->getKey());
             $job = JobRequest::query()->with(['client', 'professional.user', 'service'])->lockForUpdate()->findOrFail($quote->job_request_id);
@@ -210,7 +223,20 @@ class JobWorkflowService
 
             $job->quotes()->where('id', '!=', $quote->getKey())->where('status', QuoteStatus::PENDING->value)->update(['status' => QuoteStatus::SUPERSEDED->value]);
             $quote->forceFill(['status' => QuoteStatus::ACCEPTED, 'accepted_at' => now()])->save();
-            $job->forceFill(['status' => JobStatus::AWAITING_PAYMENT, 'agreed_price' => $quote->amount])->save();
+            $money = $this->paymentCalculation->calculateJob((string) $quote->amount);
+            $job->forceFill([
+                'status' => JobStatus::AWAITING_PAYMENT,
+                'agreed_price' => $money->baseAmount,
+                'economic_model_version' => $money->economicModelVersion,
+                'base_amount' => $money->baseAmount,
+                'client_service_fee_percent' => $money->clientServiceFeePercent,
+                'client_service_fee' => $money->clientServiceFee,
+                'professional_commission_percent' => $money->professionalCommissionPercent,
+                'professional_commission' => $money->professionalCommission,
+                'customer_total' => $money->customerTotal,
+                'platform_gross_fee' => $money->platformGrossFee,
+                'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
+            ])->save();
             $quote->professional?->user?->notify(new ChambappNotification(
                 'quote_accepted',
                 'El cliente aceptó tu cotización',

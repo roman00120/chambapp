@@ -9,10 +9,11 @@ use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Services\ProfessionalIdentityVerificationService;
 
 class ProfessionalDashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, ProfessionalIdentityVerificationService $identityVerification): View
     {
         $user = $request->user();
         $profile = $user->professionalProfile()->firstOrCreate([
@@ -21,9 +22,22 @@ class ProfessionalDashboardController extends Controller
             'verification_status' => VerificationStatus::UNVERIFIED,
         ]);
 
+        $approvedPaymentTotals = $profile->payments()
+            ->where('status', PaymentStatus::APPROVED->value)
+            ->selectRaw('COALESCE(SUM(COALESCE(base_amount, gross_amount)), 0) as base_revenue')
+            ->selectRaw('COALESCE(SUM(COALESCE(professional_commission, platform_fee)), 0) as professional_commissions')
+            ->selectRaw('COALESCE(SUM(COALESCE(professional_amount_before_external_costs, professional_amount)), 0) as professional_revenue_before_external_costs')
+            ->first();
+
+        $identityRecord = $identityVerification->recordFor($profile);
+        $profile->setRelation('identityVerification', $identityRecord);
+
         return view('dashboards.professional', [
             'user' => $user,
             'profile' => $profile->load('user'),
+            'identityStatus' => $identityVerification->statusFor($profile),
+            'identityRequired' => $identityVerification->isRequired(),
+            'canAcceptJobs' => $identityVerification->professionalCanAcceptJobs($profile),
             'activeServicesCount' => $profile->services()->active()->count(),
             'totalServicesCount' => $profile->services()->count(),
             'pendingRequestsCount' => $profile->jobRequests()->where('status', JobStatus::PENDING)->count(),
@@ -36,9 +50,9 @@ class ProfessionalDashboardController extends Controller
                 ->where('status', PaymentStatus::APPROVED->value)
                 ->distinct()
                 ->count('job_request_id'),
-            'grossRevenue' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('gross_amount'),
-            'platformFees' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('platform_fee'),
-            'professionalRevenue' => $profile->payments()->where('status', PaymentStatus::APPROVED->value)->sum('professional_amount'),
+            'baseRevenue' => $approvedPaymentTotals->base_revenue,
+            'professionalCommissions' => $approvedPaymentTotals->professional_commissions,
+            'professionalRevenueBeforeExternalCosts' => $approvedPaymentTotals->professional_revenue_before_external_costs,
         ]);
     }
 }

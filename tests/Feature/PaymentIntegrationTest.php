@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Exceptions\MercadoPagoException;
 use App\Services\MercadoPagoService;
 use App\Services\PaymentService;
+use App\Services\JobWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Mockery;
@@ -62,6 +63,99 @@ class PaymentIntegrationTest extends TestCase
         $this->assertSame('MXN', $payment->currency);
         $this->assertSame(1, Payment::query()->count());
         $this->assertSame(1, PaymentTransaction::query()->where('event_type', 'checkout.created')->count());
+    }
+
+    public function test_new_quote_freezes_dual_fee_snapshot_and_checkout_uses_customer_total(): void
+    {
+        $client = User::factory()->client()->create();
+        $professional = User::factory()->professional()->create();
+        $profile = ProfessionalProfile::factory()->create([
+            'user_id' => $professional->id,
+            'mercadopago_user_id' => 'seller-dual',
+            'mercadopago_access_token' => 'seller-token',
+            'mercadopago_refresh_token' => 'seller-refresh',
+            'mercadopago_token_expires_at' => now()->addMonths(5),
+        ]);
+        $service = Service::factory()->create(['professional_id' => $profile->id]);
+        $job = JobRequest::factory()->create([
+            'client_id' => $client->id,
+            'professional_id' => $profile->id,
+            'service_id' => $service->id,
+            'agreed_price' => null,
+            'status' => JobStatus::ACCEPTED,
+        ]);
+        $quote = JobQuote::factory()->create([
+            'job_request_id' => $job->id,
+            'professional_id' => $profile->id,
+            'amount' => '1000.00',
+            'status' => QuoteStatus::PENDING,
+        ]);
+
+        app(JobWorkflowService::class)->acceptQuote($quote, $client);
+        $job->refresh();
+        $this->assertSame('client_15_professional_15', $job->economic_model_version);
+        $this->assertSame('1000.00', $job->base_amount);
+        $this->assertSame('150.00', $job->client_service_fee);
+        $this->assertSame('150.00', $job->professional_commission);
+        $this->assertSame('1150.00', $job->customer_total);
+        $this->assertSame('300.00', $job->platform_gross_fee);
+        $this->assertSame('850.00', $job->professional_amount_before_external_costs);
+
+        config([
+            'chambapp.payments.client_service_fee_percent' => '20',
+            'chambapp.payments.professional_commission_percent' => '20',
+        ]);
+
+        $provider = Mockery::mock(MercadoPagoService::class);
+        $provider->shouldReceive('createPreference')->once()->withArgs(function (Payment $payment): bool {
+            return $payment->economic_model_version === 'client_15_professional_15'
+                && $payment->gross_amount === '1150.00'
+                && $payment->platform_fee === '300.00'
+                && $payment->professional_amount === '850.00'
+                && $payment->customer_total === '1150.00'
+                && $payment->platform_gross_fee === '300.00';
+        })->andReturn(['id' => 'pref-dual', 'url' => 'https://sandbox.mercadopago.test/checkout/dual']);
+        $this->app->instance(MercadoPagoService::class, $provider);
+
+        app(PaymentService::class)->startCheckout($job, $client);
+        $this->assertDatabaseHas('payments', [
+            'job_request_id' => $job->id,
+            'base_amount' => '1000.00',
+            'client_service_fee' => '150.00',
+            'professional_commission' => '150.00',
+            'customer_total' => '1150.00',
+            'platform_gross_fee' => '300.00',
+            'professional_amount_before_external_costs' => '850.00',
+        ]);
+    }
+
+    public function test_dual_fee_mercado_pago_preference_uses_1150_transaction_and_300_marketplace_fee(): void
+    {
+        [$job, $client] = $this->awaitingPaymentFixture();
+        $money = app(\App\Services\PaymentCalculationService::class)->calculateJob('1000.00');
+        $job->forceFill([
+            'economic_model_version' => $money->economicModelVersion,
+            'base_amount' => $money->baseAmount,
+            'client_service_fee_percent' => $money->clientServiceFeePercent,
+            'client_service_fee' => $money->clientServiceFee,
+            'professional_commission_percent' => $money->professionalCommissionPercent,
+            'professional_commission' => $money->professionalCommission,
+            'customer_total' => $money->customerTotal,
+            'platform_gross_fee' => $money->platformGrossFee,
+            'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
+        ])->save();
+        Http::fake(['https://api.mercadopago.com/checkout/preferences' => Http::response([
+            'id' => 'pref-dual-shape',
+            'init_point' => 'https://www.mercadopago.com/checkout/dual',
+            'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/dual',
+        ])]);
+
+        $payment = app(PaymentService::class)->startCheckout($job->fresh(), $client);
+
+        Http::assertSent(fn ($request): bool => $request->data()['items'][0]['unit_price'] === 1150.0
+            && $request->data()['marketplace_fee'] === 300.0);
+        $this->assertSame('1150.00', $payment->gross_amount);
+        $this->assertSame('300.00', $payment->platform_fee);
     }
 
     public function test_mercado_pago_preference_uses_seller_token_and_marketplace_fee(): void

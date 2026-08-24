@@ -17,7 +17,10 @@ class Payment extends Model
 
     protected $fillable = [
         'job_request_id', 'client_id', 'professional_id', 'provider', 'kind',
-        'external_payment_id', 'external_reference', 'currency', 'gross_amount',
+        'external_payment_id', 'external_reference', 'currency', 'economic_model_version',
+        'base_amount', 'client_service_fee_percent', 'client_service_fee',
+        'professional_commission_percent', 'professional_commission', 'customer_total',
+        'platform_gross_fee', 'professional_amount_before_external_costs', 'gross_amount',
         'platform_fee_percent', 'platform_fee', 'provider_fee', 'professional_amount',
         'external_preference_id', 'checkout_url', 'checkout_expires_at', 'status', 'tip_amount', 'tip_platform_fee', 'tip_professional_amount',
         'paid_at', 'refunded_at', 'refunded_amount', 'last_reconciled_at',
@@ -27,6 +30,14 @@ class Payment extends Model
     {
         return [
             'gross_amount' => 'decimal:2',
+            'base_amount' => 'decimal:2',
+            'client_service_fee_percent' => 'decimal:2',
+            'client_service_fee' => 'decimal:2',
+            'professional_commission_percent' => 'decimal:2',
+            'professional_commission' => 'decimal:2',
+            'customer_total' => 'decimal:2',
+            'platform_gross_fee' => 'decimal:2',
+            'professional_amount_before_external_costs' => 'decimal:2',
             'platform_fee_percent' => 'decimal:2',
             'platform_fee' => 'decimal:2',
             'provider_fee' => 'decimal:2',

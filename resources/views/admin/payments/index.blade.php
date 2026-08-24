@@ -22,20 +22,21 @@
         </x-ui.card>
         <div class="admin-table-wrap">
             <table class="table admin-table">
-                <thead><tr><th>Payment</th><th>Participantes</th><th>Bruto</th><th>Comisión</th><th>Profesional</th><th>Estado</th><th></th></tr></thead>
+                <thead><tr><th>Payment</th><th>Participantes</th><th>Base</th><th>Total cliente</th><th>Ingreso bruto plataforma</th><th>Profesional</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($payments as $payment)
                         <tr>
                             <td>#{{ $payment->id }}<small class="d-block text-muted">{{ $payment->external_reference }}</small></td>
                             <td>{{ $payment->client->name }}<small class="d-block text-muted">{{ $payment->professional->user->name }}</small></td>
-                            <td>{{ $payment->gross_amount }} {{ $payment->currency }}</td>
-                            <td>{{ $payment->platform_fee_percent }}% · {{ $payment->platform_fee }}</td>
-                            <td>{{ $payment->professional_amount }}</td>
+                            <td>{{ $payment->base_amount ?? $payment->gross_amount }} {{ $payment->currency }}</td>
+                            <td>{{ $payment->customer_total ?? $payment->gross_amount }}</td>
+                            <td>{{ $payment->platform_gross_fee ?? $payment->platform_fee }}</td>
+                            <td>{{ $payment->professional_amount_before_external_costs ?? $payment->professional_amount }}</td>
                             <td>{{ $payment->status->value }}</td>
                             <td><a class="ui-button ui-button--outline ui-button--sm" href="{{ route('admin.payments.show', $payment) }}">Detalle</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">Sin pagos.</td></tr>
+                        <tr><td colspan="8">Sin pagos.</td></tr>
                     @endforelse
                 </tbody>
             </table>

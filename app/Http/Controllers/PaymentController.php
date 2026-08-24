@@ -18,7 +18,7 @@ class PaymentController extends Controller
     {
         $this->authorize('paymentSummary', $jobRequest);
         $jobRequest->load(['service', 'professional.user', 'quotes', 'payment']);
-        $money = $calculation->calculate((string) $jobRequest->agreed_price);
+        $money = $calculation->forJob($jobRequest);
 
         return view('payments.summary', [
             'jobRequest' => $jobRequest,

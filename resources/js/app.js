@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap';
+import { submitConfirmedForm } from './confirmed-form-submit';
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
@@ -113,6 +114,7 @@ const confirmModal = document.querySelector('[data-ui-confirm-modal]');
 const confirmMessage = document.querySelector('[data-ui-confirm-message]');
 const confirmSubmit = document.querySelector('[data-ui-confirm-submit]');
 let pendingConfirmationForm = null;
+let pendingConfirmationSubmitter = null;
 
 document.querySelectorAll('[data-confirm-delete-form]').forEach((form) => {
     form.addEventListener('submit', (event) => {
@@ -122,6 +124,7 @@ document.querySelectorAll('[data-confirm-delete-form]').forEach((form) => {
 
         event.preventDefault();
         pendingConfirmationForm = form;
+        pendingConfirmationSubmitter = event.submitter;
         if (confirmMessage) {
             confirmMessage.textContent = form.action.includes('/imagenes/')
                 ? 'La imagen se eliminará de este servicio.'
@@ -139,6 +142,7 @@ document.querySelectorAll('[data-confirm-form]').forEach((form) => {
 
         event.preventDefault();
         pendingConfirmationForm = form;
+        pendingConfirmationSubmitter = event.submitter;
         const title = document.querySelector('#ui-confirm-title');
         if (title) {
             title.textContent = '¿Confirmar acción?';
@@ -157,12 +161,11 @@ confirmSubmit?.addEventListener('click', () => {
     }
 
     const form = pendingConfirmationForm;
+    const submitter = pendingConfirmationSubmitter;
     pendingConfirmationForm = null;
+    pendingConfirmationSubmitter = null;
     bootstrap.Modal.getOrCreateInstance(confirmModal).hide();
-    form.querySelectorAll('button[type="submit"]').forEach((button) => {
-        button.disabled = true;
-    });
-    form.submit();
+    submitConfirmedForm(form, submitter);
 });
 
 document.querySelectorAll('[data-disable-on-submit]').forEach((form) => {

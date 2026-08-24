@@ -79,6 +79,21 @@ class AdminControlPanelTest extends TestCase
         $this->actingAs($admin)->patch(route('admin.users.status', $admin), ['status' => 'blocked'])->assertSessionHasErrors('user');
     }
 
+    public function test_all_user_status_buttons_apply_the_selected_state(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->professional()->create();
+
+        foreach (['suspended', 'blocked', 'active'] as $status) {
+            $this->actingAs($admin)
+                ->patch(route('admin.users.status', $user), ['status' => $status])
+                ->assertRedirect()
+                ->assertSessionHas('status');
+
+            $this->assertSame($status, $user->fresh()->status->value);
+        }
+    }
+
     public function test_admin_can_verify_professional_and_moderate_service_and_category(): void
     {
         $admin = User::factory()->admin()->create();
@@ -96,6 +111,48 @@ class AdminControlPanelTest extends TestCase
         $this->actingAs($admin)->get(route('marketplace.service', $service))->assertNotFound();
         $this->actingAs($admin)->patch(route('admin.categories.toggle', $category))->assertRedirect();
         $this->assertFalse($category->fresh()->is_active);
+    }
+
+    public function test_professional_approval_and_rejection_buttons_change_verification(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $professional = ProfessionalProfile::factory()->create([
+            'verification_status' => VerificationStatus::UNVERIFIED,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.professionals.approve', $professional))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+        $this->assertSame(VerificationStatus::VERIFIED, $professional->fresh()->verification_status);
+
+        $this->actingAs($admin)
+            ->post(route('admin.professionals.reject', $professional), ['reason' => 'Documento pendiente'])
+            ->assertRedirect()
+            ->assertSessionHas('status');
+        $this->assertSame(VerificationStatus::REJECTED, $professional->fresh()->verification_status);
+        $this->assertSame('Documento pendiente', $professional->fresh()->verification_rejection_reason);
+    }
+
+    public function test_admin_index_pages_are_operational(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        foreach ([
+            'admin.dashboard',
+            'admin.users.index',
+            'admin.professionals.index',
+            'admin.categories.index',
+            'admin.services.index',
+            'admin.jobs.index',
+            'admin.payments.index',
+            'admin.commissions.index',
+            'admin.reports.index',
+            'admin.reviews.index',
+            'admin.disputes.index',
+        ] as $routeName) {
+            $this->actingAs($admin)->get(route($routeName))->assertOk();
+        }
     }
 
     public function test_admin_moderates_review_and_recalculates_rating(): void

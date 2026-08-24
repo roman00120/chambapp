@@ -3,6 +3,9 @@
 return [
     'payments' => [
         'currency' => env('CHAMBAPP_PAYMENT_CURRENCY', 'MXN'),
+        'client_service_fee_percent' => env('CHAMBAPP_CLIENT_SERVICE_FEE_PERCENT', '15'),
+        'professional_commission_percent' => env('CHAMBAPP_PROFESSIONAL_COMMISSION_PERCENT', '15'),
+        // Legacy V1 setting retained for historical payments, tips and commerce.
         'platform_fee_percent' => env('CHAMBAPP_PLATFORM_FEE_PERCENT', '15'),
         'checkout_timeout' => (int) env('CHAMBAPP_PAYMENT_TIMEOUT', 10),
         'preference_lifetime_hours' => (int) env('CHAMBAPP_PAYMENT_PREFERENCE_HOURS', 24),
@@ -25,5 +28,10 @@ return [
         'max_service_radius_km' => 25,
         'polling_interval_seconds' => 4,
         'service_radius_options_km' => [5, 10, 15, 25],
+    ],
+    'identity_verification' => [
+        // Keep false until a KYC provider is selected, integrated and tested.
+        'required' => filter_var(env('PROFESSIONAL_IDENTITY_VERIFICATION_REQUIRED', false), FILTER_VALIDATE_BOOL),
+        'provider' => env('PROFESSIONAL_IDENTITY_VERIFICATION_PROVIDER'),
     ],
 ];

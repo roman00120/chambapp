@@ -9,13 +9,13 @@ class ProfessionalPublicProfileController extends Controller
 {
     public function __invoke(ProfessionalProfile $professionalProfile): View
     {
-        $professionalProfile->load('user');
+        $professionalProfile->load(['user', 'identityVerification']);
         abort_unless($professionalProfile->isPubliclyVisible(), 404);
 
         $professionalProfile->load([
             'services' => fn ($query) => $query->active()
                 ->whereHas('category', fn ($category) => $category->where('is_active', true))
-                ->with(['category', 'coverImage', 'professional.user'])
+                ->with(['category', 'coverImage', 'professional.user', 'professional.identityVerification'])
                 ->latest(),
             'reviews' => fn ($query) => $query
                 ->visible()

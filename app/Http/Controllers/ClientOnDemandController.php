@@ -70,7 +70,7 @@ class ClientOnDemandController extends Controller
                 'photo' => $professional->profile_photo,
                 'rating' => $professional->average_rating,
                 'completed_jobs' => $professional->total_completed_jobs,
-                'verified' => $professional->isPubliclyVisible(),
+                'verified' => $professional->hasVerifiedIdentity(),
             ] : null,
             'quote' => $quote ? ['status' => $quote->status?->value, 'amount' => $quote->amount] : null,
         ]);

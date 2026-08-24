@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\VerificationStatus;
+use App\Enums\IdentityVerificationStatus;
 use App\Models\Category;
 use App\Models\ProfessionalProfile;
 use App\Models\Service;
@@ -33,6 +34,10 @@ class PublicApiTest extends TestCase
             'verification_status' => VerificationStatus::VERIFIED,
             'city' => 'Guadalajara',
             'mercadopago_access_token' => 'secret-token',
+        ]);
+        $professional->identityVerification()->create([
+            'status' => IdentityVerificationStatus::VERIFIED,
+            'verified_at' => now(),
         ]);
         Service::factory()->create([
             'professional_id' => $professional->id,

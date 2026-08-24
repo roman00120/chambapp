@@ -23,6 +23,7 @@ class PaymentService
         private readonly PaymentCalculationService $calculation,
         private readonly MercadoPagoService $mercadoPago,
         private readonly PaymentStatusMapper $statusMapper,
+        private readonly ProfessionalIdentityVerificationService $identityVerification,
     ) {}
 
     public function startCheckout(JobRequest $jobRequest, User $client): Payment
@@ -217,7 +218,8 @@ class PaymentService
                 'external_payment_id' => $providerPaymentId,
                 'status' => $mappedStatus,
             ];
-            $rawProviderFees = collect((array) data_get($providerData, 'fee_details', []))
+            $providerFeeDetails = collect((array) data_get($providerData, 'fee_details', []));
+            $rawProviderFees = $providerFeeDetails
                 ->filter(fn ($fee): bool => strtolower((string) data_get($fee, 'type')) === 'mercadopago_fee')
                 ->pluck('amount')
                 ->filter(fn ($amount): bool => filled($amount));
@@ -237,13 +239,29 @@ class PaymentService
                 }
             }
             $splitMismatch = false;
+            $rawMarketplaceFees = $providerFeeDetails
+                ->filter(fn ($fee): bool => in_array(strtolower((string) data_get($fee, 'type')), ['marketplace_fee', 'application_fee'], true))
+                ->pluck('amount')
+                ->filter(fn ($amount): bool => filled($amount));
+            if ($rawMarketplaceFees->isNotEmpty()) {
+                $marketplaceFees = $rawMarketplaceFees
+                    ->map(fn (mixed $amount): ?string => $this->normalizeExternalAmount($amount))
+                    ->filter(fn (?string $amount): bool => $amount !== null);
+                $expectedMarketplaceFee = (string) ($lockedPayment->platform_gross_fee ?? $lockedPayment->platform_fee);
+                if ($marketplaceFees->count() !== $rawMarketplaceFees->count()
+                    || ! $this->calculation->sameAmount($this->calculation->sum($marketplaceFees), $expectedMarketplaceFee)) {
+                    $splitMismatch = true;
+                    $auxiliaryIssues[] = 'marketplace_fee_mismatch';
+                }
+            }
             $netReceived = data_get($providerData, 'transaction_details.net_received_amount');
             if (filled($netReceived)) {
                 $normalizedNet = $this->normalizeExternalAmount($netReceived);
-                $expectedMaximum = $this->calculation->calculate(
-                    (string) $lockedPayment->gross_amount,
-                    (string) $lockedPayment->platform_fee_percent,
-                )->professionalAmount;
+                $expectedMaximum = (string) ($lockedPayment->professional_amount_before_external_costs
+                    ?? $this->calculation->calculate(
+                        (string) $lockedPayment->gross_amount,
+                        (string) $lockedPayment->platform_fee_percent,
+                    )->professionalAmount);
                 if ($normalizedNet === null) {
                     $auxiliaryIssues[] = 'net_received_amount_invalid';
                 } elseif ($this->calculation->isAtMost($normalizedNet, $expectedMaximum)) {
@@ -454,6 +472,7 @@ class PaymentService
     {
         return DB::transaction(function () use ($jobRequest, $client): Payment {
             $job = JobRequest::query()->with(['professional', 'quotes'])->lockForUpdate()->findOrFail($jobRequest->getKey());
+            $this->identityVerification->ensureProfessionalCanAcceptJobs($job->professional);
             if ($job->client_id !== $client->getKey()) {
                 throw new DomainException('No puedes pagar este trabajo.');
             }
@@ -486,13 +505,22 @@ class PaymentService
                 return $active;
             }
 
-            $money = $this->calculation->calculate((string) $job->agreed_price);
+            $money = $this->calculation->forJob($job);
             $payment = $job->payments()->create([
                 'client_id' => $job->client_id,
                 'professional_id' => $job->professional_id,
                 'provider' => config('chambapp.payments.provider'),
                 'kind' => PaymentKind::JOB,
                 'currency' => $money->currency,
+                'economic_model_version' => $money->economicModelVersion,
+                'base_amount' => $money->baseAmount,
+                'client_service_fee_percent' => $money->clientServiceFeePercent,
+                'client_service_fee' => $money->clientServiceFee,
+                'professional_commission_percent' => $money->professionalCommissionPercent,
+                'professional_commission' => $money->professionalCommission,
+                'customer_total' => $money->customerTotal,
+                'platform_gross_fee' => $money->platformGrossFee,
+                'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
                 'gross_amount' => $money->grossAmount,
                 'platform_fee_percent' => $money->platformFeePercent,
                 'platform_fee' => $money->platformFee,
@@ -508,6 +536,15 @@ class PaymentService
                 'payload' => [
                     'kind' => PaymentKind::JOB->value,
                     'currency' => $money->currency,
+                    'economic_model_version' => $money->economicModelVersion,
+                    'base_amount' => $money->baseAmount,
+                    'client_service_fee_percent' => $money->clientServiceFeePercent,
+                    'client_service_fee' => $money->clientServiceFee,
+                    'professional_commission_percent' => $money->professionalCommissionPercent,
+                    'professional_commission' => $money->professionalCommission,
+                    'customer_total' => $money->customerTotal,
+                    'platform_gross_fee' => $money->platformGrossFee,
+                    'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
                     'gross_amount' => $money->grossAmount,
                     'platform_fee_percent' => $money->platformFeePercent,
                     'platform_fee' => $money->platformFee,

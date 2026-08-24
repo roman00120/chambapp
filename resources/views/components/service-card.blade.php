@@ -2,7 +2,7 @@
 
 @php
     $professional = $service->professional;
-    $isVerified = $professional?->verification_status?->value === 'verified';
+    $isVerified = $professional?->hasVerifiedIdentity() ?? false;
     $hasReviews = (int) ($professional?->total_reviews ?? 0) > 0;
 @endphp
 
