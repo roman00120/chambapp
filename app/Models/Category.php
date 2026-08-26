@@ -20,6 +20,41 @@ class Category extends Model
         return ['is_active' => 'boolean', 'sort_order' => 'integer'];
     }
 
+    public const ICON_MAP = [
+        'bolt' => 'lightning-charge',
+        'electricidad' => 'lightning-charge',
+        'electricity' => 'lightning-charge',
+        'lightning' => 'lightning-charge',
+        'sparkles' => 'stars',
+        'limpieza' => 'stars',
+        'cleaning' => 'stars',
+        'clean' => 'stars',
+    ];
+
+    public function bootstrapIcon(): string
+    {
+        $raw = strtolower(trim((string) $this->icon));
+        if (isset(self::ICON_MAP[$raw])) {
+            return self::ICON_MAP[$raw];
+        }
+
+        if ($raw !== '') {
+            return $raw;
+        }
+
+        $slug = strtolower(trim((string) $this->slug));
+        if (isset(self::ICON_MAP[$slug])) {
+            return self::ICON_MAP[$slug];
+        }
+
+        return 'grid';
+    }
+
+    public function getBootstrapIconAttribute(): string
+    {
+        return $this->bootstrapIcon();
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);

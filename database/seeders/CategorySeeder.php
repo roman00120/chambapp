@@ -11,10 +11,10 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Electricidad', 'icon' => 'bolt'],
+            ['name' => 'Electricidad', 'icon' => 'lightning-charge'],
             ['name' => 'Carpintería', 'icon' => 'hammer'],
             ['name' => 'Construcción', 'icon' => 'building'],
-            ['name' => 'Limpieza', 'icon' => 'sparkles'],
+            ['name' => 'Limpieza', 'icon' => 'stars'],
             ['name' => 'Mecánica', 'icon' => 'car-front'],
             ['name' => 'Plomería', 'icon' => 'droplet'],
             ['name' => 'Pintura', 'icon' => 'brush'],
