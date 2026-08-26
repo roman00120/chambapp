@@ -75,11 +75,17 @@
                                     <td><code>#REP-{{ $report->id }}</code></td>
                                     <td>
                                         <div class="fw-bold">{{ $report->reporter?->name ?? 'Usuario' }}</div>
-                                        <small class="text-muted">{{ $report->reporter?->email }}</small>
+                                        <small class="text-muted d-block">{{ $report->reporter?->email }}</small>
+                                        <span class="badge bg-light text-dark border small mt-1">
+                                            {{ implode(' / ', array_map(fn($c) => ucfirst($c), $report->reporter?->capabilities() ?? [$report->reporter?->role?->value ?? 'usuario'])) }}
+                                        </span>
                                     </td>
                                     <td>
                                         <div class="fw-bold text-danger">{{ $report->reported?->name ?? 'Usuario' }}</div>
-                                        <small class="text-muted">{{ $report->reported?->role->value }} · ID: {{ $report->reported_id }}</small>
+                                        <small class="text-muted d-block">ID: {{ $report->reported_id }} · {{ $report->reported?->email }}</small>
+                                        <span class="badge bg-light text-danger border border-danger small mt-1">
+                                            {{ implode(' / ', array_map(fn($c) => ucfirst($c), $report->reported?->capabilities() ?? [$report->reported?->role?->value ?? 'usuario'])) }}
+                                        </span>
                                     </td>
                                     <td>
                                         <span class="d-inline-block text-truncate" style="max-width: 200px;">

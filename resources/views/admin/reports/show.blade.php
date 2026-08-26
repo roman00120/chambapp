@@ -191,7 +191,12 @@
                     <div class="card-body">
                         <div class="fw-bold">{{ $report->reporter?->name ?? 'Usuario' }}</div>
                         <small class="text-muted d-block">{{ $report->reporter?->email }}</small>
-                        <small class="badge bg-light text-dark border mt-2">{{ $report->reporter?->role->value }}</small>
+                        <div class="mt-2">
+                            <span class="small text-muted d-block">Capacidades:</span>
+                            <span class="badge bg-light text-dark border">
+                                {{ implode(', ', array_map(fn($c) => ucfirst($c), $report->reporter?->capabilities() ?? [$report->reporter?->role?->value ?? 'usuario'])) }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -203,10 +208,16 @@
                     <div class="card-body">
                         <div class="fw-bold fs-6">{{ $report->reported?->name ?? 'Usuario' }}</div>
                         <small class="text-muted d-block">{{ $report->reported?->email }}</small>
-                        <small class="text-muted d-block">ID: {{ $report->reported_id }} · Rol: {{ $report->reported?->role->value }}</small>
+                        <small class="text-muted d-block">User ID: {{ $report->reported_id }}</small>
+                        <div class="mt-2">
+                            <span class="small text-muted d-block">Capacidades:</span>
+                            <span class="badge bg-light text-danger border border-danger">
+                                {{ implode(', ', array_map(fn($c) => ucfirst($c), $report->reported?->capabilities() ?? [$report->reported?->role?->value ?? 'usuario'])) }}
+                            </span>
+                        </div>
 
                         <hr>
-                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Historial Disciplinario Privado:</h6>
+                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Historial Disciplinario de la Cuenta (User #{{ $report->reported_id }}):</h6>
                         
                         <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
                             <span class="small">Tarjetas amarillas activas:</span>
