@@ -20,8 +20,12 @@ class MercadoPagoWebhookSignature
             });
         $timestamp = $parts->get('ts');
         $provided = $parts->get('v1');
-        $requestId = (string) $request->header('x-request-id', '');
-        $dataId = (string) ($request->query('data.id') ?: data_get($request->input('data'), 'id', ''));
+        $dataId = (string) (
+            $request->query('data.id')
+            ?: $request->query('data_id')
+            ?: data_get($request->input('data'), 'id', '')
+            ?: (preg_match('/[?&]data\.id=([^&]+)/', (string) $request->server('QUERY_STRING', ''), $m) ? urldecode($m[1]) : '')
+        );
 
         if (! filled($timestamp) || ! ctype_digit((string) $timestamp) || ! filled($provided)) {
             return false;
@@ -34,6 +38,7 @@ class MercadoPagoWebhookSignature
             return false;
         }
 
+        $requestId = (string) $request->header('x-request-id', '');
         $manifest = '';
         if ($dataId !== '') {
             $manifest .= 'id:'.$dataId.';';
