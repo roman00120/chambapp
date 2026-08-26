@@ -21,7 +21,7 @@
                             @csrf
                             @method('PUT')
                             <div class="profile-form__photo mb-4">
-                                <x-ui.avatar id="profile-avatar-preview" :user="$profile->user" :src="$profile->profile_photo" :name="$profile->user->name" size="lg" />
+                                <x-ui.avatar id="profile-avatar-preview" :user="$profile->user" :src="$profile->profile_photo_url ?? $profile->profile_photo" :name="$profile->user->name" size="lg" />
                                 <div>
                                     <label class="form-label" for="profile_photo">Foto de perfil</label>
                                     <input class="form-control @error('profile_photo') is-invalid @enderror" id="profile_photo" name="profile_photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-avatar-input>

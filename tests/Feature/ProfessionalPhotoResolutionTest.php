@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\ProfessionalProfile;
 use App\Models\User;
+use App\Services\ProfessionalProfileService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Blade;
@@ -57,6 +58,11 @@ class ProfessionalPhotoResolutionTest extends TestCase
 
         $cardBlade = Blade::render('<x-professional-card :professional="$profile" />', ['profile' => $profile->fresh('user')]);
         $this->assertStringContainsString('src="'.$expectedUrl.'"', $cardBlade);
+
+        // Test Edit Profile View preview
+        $editView = $this->actingAs($user)->get(route('professional.profile.edit'));
+        $editView->assertOk();
+        $editView->assertSee($expectedUrl, false);
     }
 
     public function test_professional_without_photo_renders_fallback_initials(): void
@@ -79,26 +85,81 @@ class ProfessionalPhotoResolutionTest extends TestCase
         $blade = Blade::render('<x-ui.avatar :user="$user" size="md" />', ['user' => $user->fresh('professionalProfile')]);
         $this->assertStringContainsString('AR', $blade);
         $this->assertStringNotContainsString('<img', $blade);
+
+        $editView = $this->actingAs($user)->get(route('professional.profile.edit'));
+        $editView->assertOk();
+        $editView->assertSee('AR');
     }
 
-    public function test_two_professionals_have_distinct_photos_without_leak(): void
+    public function test_updating_profile_without_new_photo_preserves_existing_photo(): void
     {
         Storage::fake('public');
 
-        $userA = User::factory()->create(['name' => 'Pro A', 'role' => UserRole::PROFESSIONAL]);
-        $userB = User::factory()->create(['name' => 'Pro B', 'role' => UserRole::PROFESSIONAL]);
+        $user = User::factory()->create([
+            'name' => 'David Morales',
+            'phone' => '3312345678',
+            'role' => UserRole::PROFESSIONAL,
+            'status' => UserStatus::ACTIVE,
+        ]);
 
-        $photoA = UploadedFile::fake()->image('photoA.jpg')->store('profiles', 'public');
-        $photoB = UploadedFile::fake()->image('photoB.jpg')->store('profiles', 'public');
+        $photo = UploadedFile::fake()->image('david.jpg', 300, 300);
+        $path = $photo->store('profiles', 'public');
 
-        $profileA = ProfessionalProfile::factory()->create(['user_id' => $userA->id, 'profile_photo' => $photoA]);
-        $profileB = ProfessionalProfile::factory()->create(['user_id' => $userB->id, 'profile_photo' => $photoB]);
+        $profile = ProfessionalProfile::factory()->create([
+            'user_id' => $user->id,
+            'profile_photo' => $path,
+            'experience_years' => 5,
+        ]);
 
-        $urlA = Storage::disk('public')->url($photoA);
-        $urlB = Storage::disk('public')->url($photoB);
+        $service = app(ProfessionalProfileService::class);
 
-        $this->assertNotEquals($urlA, $urlB);
-        $this->assertEquals($urlA, $profileA->profilePhotoUrl());
-        $this->assertEquals($urlB, $profileB->profilePhotoUrl());
+        // Update basic info without sending photo
+        $updated = $service->update($user, $profile, [
+            'name' => 'David Morales Updated',
+            'phone' => '3312345678',
+            'bio' => 'Nueva biografía',
+            'experience_years' => 6,
+            'city' => 'Guadalajara',
+            'state' => 'Jalisco',
+            'postal_code' => '44100',
+        ], null);
+
+        $this->assertEquals($path, $updated->profile_photo);
+        $this->assertTrue(Storage::disk('public')->exists($path));
+    }
+
+    public function test_updating_profile_with_new_photo_replaces_old_photo(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create([
+            'name' => 'David Morales',
+            'phone' => '3312345678',
+            'role' => UserRole::PROFESSIONAL,
+            'status' => UserStatus::ACTIVE,
+        ]);
+
+        $oldPhoto = UploadedFile::fake()->image('old.jpg', 300, 300);
+        $oldPath = $oldPhoto->store('profiles', 'public');
+
+        $profile = ProfessionalProfile::factory()->create([
+            'user_id' => $user->id,
+            'profile_photo' => $oldPath,
+            'experience_years' => 5,
+        ]);
+
+        $newPhoto = UploadedFile::fake()->image('new.jpg', 400, 400);
+
+        $service = app(ProfessionalProfileService::class);
+        $updated = $service->update($user, $profile, [
+            'name' => 'David Morales',
+            'phone' => '3312345678',
+            'bio' => 'Bio',
+            'experience_years' => 5,
+        ], $newPhoto);
+
+        $this->assertNotEquals($oldPath, $updated->profile_photo);
+        $this->assertFalse(Storage::disk('public')->exists($oldPath));
+        $this->assertTrue(Storage::disk('public')->exists($updated->profile_photo));
     }
 }

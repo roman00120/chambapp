@@ -18,7 +18,7 @@
                 <div class="col-12 col-lg-8">
                     <x-ui.card class="profile-overview h-100" padding="lg">
                         <div class="profile-overview__header">
-                            <x-ui.avatar :user="$profile->user" :src="$profile->profile_photo" :name="$profile->user->name" size="lg" />
+                            <x-ui.avatar :user="$profile->user" :src="$profile->profile_photo_url ?? $profile->profile_photo" :name="$profile->user->name" size="lg" />
                             <div class="profile-overview__identity">
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                     <h2 class="h3 mb-0">{{ $profile->user->name }}</h2>

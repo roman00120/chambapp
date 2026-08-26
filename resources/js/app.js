@@ -68,14 +68,20 @@ document.querySelectorAll('[data-avatar-input]').forEach((input) => {
         }
 
         let image = preview.querySelector('img');
-        if (!image) {
-            preview.textContent = '';
-            image = document.createElement('img');
-            preview.appendChild(image);
+        const fallbackSpan = preview.querySelector('span[aria-hidden="true"]');
+        if (fallbackSpan) {
+            fallbackSpan.style.display = 'none';
         }
 
+        if (!image) {
+            image = document.createElement('img');
+            image.alt = 'Vista previa de la foto de perfil';
+            preview.insertBefore(image, preview.firstChild);
+        }
+
+        image.onerror = null;
+        image.style.display = '';
         image.src = URL.createObjectURL(file);
-        image.alt = 'Vista previa de la foto de perfil';
     });
 });
 

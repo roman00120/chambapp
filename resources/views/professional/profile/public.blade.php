@@ -11,7 +11,7 @@
                 <div class="col-12 col-lg-4">
                     <x-ui.card class="marketplace-professional-card h-100" padding="lg">
                         <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
-                            <x-ui.avatar :user="$profile->user" :src="$profile->profile_photo" :name="$profile->user->name" size="xl" />
+                            <x-ui.avatar :user="$profile->user" :src="$profile->profile_photo_url ?? $profile->profile_photo" :name="$profile->user->name" size="xl" />
                             @if ($profile->hasVerifiedIdentity())
                                 <x-ui.badge variant="verified" label="Identidad verificada" dot />
                             @endif
