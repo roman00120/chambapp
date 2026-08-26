@@ -92,6 +92,13 @@ Route::post('/modo-activo', [\App\Http\Controllers\ModeSwitchController::class, 
     ->middleware(['auth', 'active'])
     ->name('active-mode.switch');
 
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/mi-cuenta/seguridad', [\App\Http\Controllers\UserReportController::class, 'securityCenter'])->name('account.security');
+    Route::get('/reportar', [\App\Http\Controllers\UserReportController::class, 'create'])->name('reports.create');
+    Route::post('/reportar', [\App\Http\Controllers\UserReportController::class, 'store'])->name('reports.store');
+    Route::post('/sanciones/{action}/apelar', [\App\Http\Controllers\UserReportController::class, 'appeal'])->name('disciplinary.appeal');
+});
+
 Route::middleware(['auth', 'active', 'role:client'])->group(function () {
     Route::get('/servicios/{service}/solicitar', [ClientJobRequestController::class, 'create'])->name('job-requests.create');
     Route::post('/servicios/{service}/solicitar', [ClientJobRequestController::class, 'store'])->name('job-requests.store');
@@ -244,9 +251,12 @@ Route::middleware(['auth', 'active', 'role:admin'])
         Route::get('/pagos', [AdminPaymentController::class, 'index'])->name('payments.index');
         Route::get('/pagos/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
         Route::get('/comisiones', [AdminCommissionController::class, 'index'])->name('commissions.index');
-        Route::get('/reportes', [AdminReportController::class, 'index'])->name('reports.index');
-        Route::get('/reportes/{report}', [AdminReportController::class, 'show'])->name('reports.show');
-        Route::patch('/reportes/{report}/estado', [AdminReportController::class, 'status'])->middleware('throttle:admin-actions')->name('reports.status');
+        Route::get('/reportes', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'index'])->name('reports.index');
+        Route::get('/reportes/{report}', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'show'])->name('reports.show');
+        Route::post('/reportes/{report}/resolver', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'resolve'])->middleware('throttle:admin-actions')->name('reports.resolve');
+        Route::get('/apelaciones', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'appeals'])->name('reports.appeals');
+        Route::post('/apelaciones/{appeal}/resolver', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'resolveAppeal'])->middleware('throttle:admin-actions')->name('reports.appeals.resolve');
+        Route::get('/evidencia/{evidence}/descargar', [\App\Http\Controllers\Admin\DisciplinaryController::class, 'downloadEvidence'])->name('reports.evidence.download');
         Route::get('/resenas', [AdminReviewController::class, 'index'])->name('reviews.index');
         Route::get('/resenas/{review}', [AdminReviewController::class, 'show'])->name('reviews.show');
         Route::patch('/resenas/{review}/moderacion', [AdminReviewController::class, 'moderate'])->middleware('throttle:admin-actions')->name('reviews.moderate');

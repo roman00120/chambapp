@@ -199,6 +199,57 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(Conversation::class, 'client_id');
     }
 
+    public function isAccountActive(): bool
+    {
+        return $this->status === UserStatus::ACTIVE;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === UserStatus::SUSPENDED;
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->status === UserStatus::BLOCKED;
+    }
+
+    public function canPerformMarketplaceActions(): bool
+    {
+        return $this->isAccountActive() && ! $this->isSuspended() && ! $this->isBanned();
+    }
+
+    public function activeYellowCardsCount(): int
+    {
+        return $this->disciplinaryActions()
+            ->where('action_type', \App\Enums\DisciplinaryActionType::YELLOW_CARD->value)
+            ->where('status', \App\Enums\DisciplinaryActionStatus::ACTIVE->value)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->count();
+    }
+
+    public function submittedUserReports(): HasMany
+    {
+        return $this->hasMany(UserReport::class, 'reporter_id');
+    }
+
+    public function receivedUserReports(): HasMany
+    {
+        return $this->hasMany(UserReport::class, 'reported_id');
+    }
+
+    public function disciplinaryActions(): HasMany
+    {
+        return $this->hasMany(DisciplinaryAction::class, 'user_id');
+    }
+
+    public function disciplinaryAppeals(): HasMany
+    {
+        return $this->hasMany(DisciplinaryAppeal::class, 'user_id');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'client_id');

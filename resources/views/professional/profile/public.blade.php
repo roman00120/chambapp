@@ -22,8 +22,16 @@
                         @if ($profile->hasVerifiedIdentity())
                             <p class="small text-muted">Identidad verificada significa que se completó el proceso de comprobación de identidad de Chambapp. No constituye garantía sobre la calidad, licencias, antecedentes o resultado del servicio.</p>
                         @endif
-                        <div class="marketplace-professional-card__meta mb-4"><span><i class="bi bi-briefcase" aria-hidden="true"></i> {{ $profile->experience_years }} años de experiencia</span><span><i class="bi bi-star-fill" aria-hidden="true"></i> {{ (int) $profile->total_reviews > 0 ? number_format((float) $profile->average_rating, 1).' ('.$profile->total_reviews.')' : 'Sin reseñas todavía' }}</span><span><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ $profile->total_completed_jobs }} trabajos completados</span></div>
-                        @auth @if (auth()->user()->isClient())<form method="POST" action="{{ route('professional.favorite.toggle', $profile) }}">@csrf<button class="ui-button ui-button--outline w-100" type="submit"><i class="bi bi-heart{{ $isFavorite ? '-fill' : '' }}" aria-hidden="true"></i> {{ $isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos' }}</button></form>@endif @else<a class="ui-button ui-button--outline w-100" href="{{ route('login') }}"><i class="bi bi-heart" aria-hidden="true"></i> Inicia sesión para guardar</a>@endauth
+                        @auth @if (auth()->user()->isClient())<form method="POST" action="{{ route('professional.favorite.toggle', $profile) }}">@csrf<button class="ui-button ui-button--outline w-100 mb-2" type="submit"><i class="bi bi-heart{{ $isFavorite ? '-fill' : '' }}" aria-hidden="true"></i> {{ $isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos' }}</button></form>@endif @else<a class="ui-button ui-button--outline w-100 mb-2" href="{{ route('login') }}"><i class="bi bi-heart" aria-hidden="true"></i> Inicia sesión para guardar</a>@endauth
+                        @auth
+                            @if (auth()->id() !== $profile->user_id)
+                                <div class="text-center mt-3">
+                                    <a href="{{ route('reports.create', ['user_id' => $profile->user_id]) }}" class="text-muted small text-decoration-none">
+                                        <i class="bi bi-flag"></i> Reportar este perfil
+                                    </a>
+                                </div>
+                            @endif
+                        @endauth
                     </x-ui.card>
                 </div>
                 <div class="col-12 col-lg-8"><div class="d-flex align-items-end justify-content-between gap-3 mb-3"><div><p class="eyebrow mb-2">Servicios publicados</p><h2 class="section-title mb-0">Lo que puede hacer por ti</h2></div><span class="text-muted small">{{ $profile->services->count() }} disponibles</span></div><div class="row g-3">@forelse ($profile->services as $service)<div class="col-12 col-md-6"><x-service-card :service="$service" :is-favorite="$isFavorite" /></div>@empty<div class="col-12"><x-ui.empty-state icon="bi-tools" title="Aún no hay servicios publicados" description="Este profesional todavía no tiene servicios activos para mostrar." /></div>@endforelse</div></div>

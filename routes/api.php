@@ -96,5 +96,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'read']);
+
+        Route::post('/reports', [\App\Http\Controllers\Api\V1\UserReportController::class, 'store'])->middleware('throttle:api-workflow');
+        Route::get('/reports/mine', [\App\Http\Controllers\Api\V1\UserReportController::class, 'myReports']);
+        Route::get('/disciplinary-actions/mine', [\App\Http\Controllers\Api\V1\UserReportController::class, 'myDisciplinaryActions']);
+        Route::post('/disciplinary-actions/{action}/appeal', [\App\Http\Controllers\Api\V1\UserReportController::class, 'appeal'])->middleware('throttle:api-workflow');
     });
 });

@@ -47,6 +47,7 @@
         <a class="sidebar-link" href="{{ route('professional.commerce.featured') }}"><i class="bi bi-megaphone" aria-hidden="true"></i> Promocionar</a>
         <a class="sidebar-link" href="{{ route('professional.commerce.store') }}"><i class="bi bi-shop" aria-hidden="true"></i> Tienda de perfil</a>
         <a class="sidebar-link" href="{{ route('professional.profile.show') }}"><i class="bi bi-person-circle" aria-hidden="true"></i> Perfil</a>
+        <a class="sidebar-link {{ request()->routeIs('account.security') ? 'sidebar-link--active' : '' }}" href="{{ route('account.security') }}"><i class="bi bi-shield-check" aria-hidden="true"></i> Seguridad y Reportes</a>
     @else
         <p class="sidebar-label">Menú Cliente</p>
         <a class="sidebar-link" href="{{ route('client.dashboard') }}"><i class="bi bi-house-door" aria-hidden="true"></i> Inicio</a>
@@ -54,6 +55,7 @@
         <a class="sidebar-link" href="{{ route('client.favorites.index') }}"><i class="bi bi-heart" aria-hidden="true"></i> Favoritos</a>
         <a class="sidebar-link" href="{{ route('client.jobs.index') }}"><i class="bi bi-briefcase" aria-hidden="true"></i> Trabajos</a>
         <a class="sidebar-link" href="{{ route('client.payments.index') }}"><i class="bi bi-receipt" aria-hidden="true"></i> Pagos</a>
+        <a class="sidebar-link {{ request()->routeIs('account.security') ? 'sidebar-link--active' : '' }}" href="{{ route('account.security') }}"><i class="bi bi-shield-check" aria-hidden="true"></i> Seguridad y Reportes</a>
     @endif
 
     @if (auth()->user()->isAdmin() && !request()->routeIs('admin.*'))
