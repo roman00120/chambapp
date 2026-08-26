@@ -38,12 +38,15 @@ class JobQuotePolicy
 
     private function isClient(User $user, JobRequest $jobRequest): bool
     {
-        return $user->role === UserRole::CLIENT && $jobRequest->client_id === $user->getKey();
+        return $user->canActAsClient()
+            && $jobRequest->client_id === $user->getKey()
+            && $jobRequest->professional?->user_id !== $user->getKey();
     }
 
     private function isProfessional(User $user, JobRequest $jobRequest): bool
     {
-        return $user->role === UserRole::PROFESSIONAL
-            && $jobRequest->professional?->user_id === $user->getKey();
+        return $user->canActAsProfessional()
+            && $jobRequest->professional?->user_id === $user->getKey()
+            && $jobRequest->client_id !== $user->getKey();
     }
 }

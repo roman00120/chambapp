@@ -13,6 +13,9 @@
                 </ul>
                 <ul class="navbar-nav site-nav-actions">
                 @auth
+                    @if (auth()->user()->isAdmin())
+                        <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ route('admin.dashboard') }}"><i class="bi bi-shield-lock" aria-hidden="true"></i> Panel Admin</a></li>
+                    @endif
                     <li class="nav-item"><a class="nav-link notification-nav-link" href="{{ route('notifications.index') }}" aria-label="Notificaciones"><i class="bi bi-bell" aria-hidden="true"></i>@if ($unreadNotifications > 0)<span class="notification-nav-link__count">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>@endif</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route(auth()->user()->dashboardRoute()) }}">Mi inicio</a></li>
                     <li class="nav-item nav-item--greeting">Hola, {{ auth()->user()->name }}</li>

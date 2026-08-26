@@ -88,6 +88,10 @@ Route::post('/webhooks/didit', DiditWebhookController::class)
     ->withoutMiddleware([ValidateCsrfToken::class])
     ->name('webhooks.didit');
 
+Route::post('/modo-activo', [\App\Http\Controllers\ModeSwitchController::class, 'switch'])
+    ->middleware(['auth', 'active'])
+    ->name('active-mode.switch');
+
 Route::middleware(['auth', 'active', 'role:client'])->group(function () {
     Route::get('/servicios/{service}/solicitar', [ClientJobRequestController::class, 'create'])->name('job-requests.create');
     Route::post('/servicios/{service}/solicitar', [ClientJobRequestController::class, 'store'])->name('job-requests.store');

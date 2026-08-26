@@ -13,11 +13,16 @@ class UserResource extends JsonResource
         $profile = $this->resource->relationLoaded('professionalProfile') ? $this->professionalProfile : $this->resource->professionalProfile;
         $avatar = $profile?->profilePhotoUrl() ?? $this->avatar_url;
 
+        $requestedMode = $request->header('X-Chambapp-Mode') ?: $request->input('active_mode');
+        $activeMode = $this->resource->resolveActiveMode($requestedMode);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'role' => $this->role?->value,
+            'capabilities' => $this->resource->capabilities(),
+            'active_mode' => $activeMode,
             'avatar' => $avatar,
             'profile_photo_url' => $avatar,
             'phone' => $this->when($request->user()?->is($this->resource), $this->phone),

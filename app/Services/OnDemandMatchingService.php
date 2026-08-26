@@ -103,6 +103,9 @@ class OnDemandMatchingService
             if ($profile->user_id !== $professional->getKey() || ! $profile->canReceiveImmediateJobs()) {
                 throw new DomainException('Ya no puedes aceptar esta chamba.');
             }
+            if ($job->client_id === $professional->getKey() || $profile->user_id === $job->client_id) {
+                throw new DomainException('No puedes aceptar tu propia solicitud de trabajo.');
+            }
             if ($job->status !== JobStatus::SEARCHING || $job->professional_id !== null) {
                 throw new DomainException('La chamba ya fue tomada por otro profesional.');
             }
@@ -234,7 +237,8 @@ class OnDemandMatchingService
             ->where('location_updated_at', '>=', now()->subMinutes((int) config('chambapp.on_demand.location_freshness_minutes', 30)))
             ->whereBetween('last_latitude', [(float) $job->latitude - $latDelta, (float) $job->latitude + $latDelta])
             ->whereBetween('last_longitude', [(float) $job->longitude - $lonDelta, (float) $job->longitude + $lonDelta])
-            ->whereHas('user', fn ($query) => $query->where('status', UserStatus::ACTIVE->value)->where('role', UserRole::PROFESSIONAL->value))
+            ->where('user_id', '!=', $job->client_id)
+            ->whereHas('user', fn ($query) => $query->where('status', UserStatus::ACTIVE->value)->whereIn('role', [UserRole::PROFESSIONAL->value, UserRole::ADMIN->value]))
             ->whereHas('services', fn ($query) => $query->active()->where('category_id', $categoryId))
             ->whereDoesntHave('jobRequests', fn ($query) => $query->whereIn('status', array_map(fn (JobStatus $status) => $status->value, $activeJobStatuses)))
             ->whereDoesntHave('invitations', fn ($query) => $query->where('job_request_id', $job->getKey())->whereIn('status', [InvitationStatus::PENDING->value, InvitationStatus::VIEWED->value, InvitationStatus::ACCEPTED->value]));

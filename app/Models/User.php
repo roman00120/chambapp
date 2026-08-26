@@ -39,17 +39,77 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     public function isClient(): bool
     {
-        return $this->role === UserRole::CLIENT;
+        return $this->canActAsClient();
     }
 
     public function isProfessional(): bool
     {
-        return $this->role === UserRole::PROFESSIONAL;
+        return $this->canActAsProfessional();
     }
 
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMIN;
+    }
+
+    public function canActAsClient(): bool
+    {
+        return $this->isActive();
+    }
+
+    public function canActAsProfessional(): bool
+    {
+        if (! $this->isActive()) {
+            return false;
+        }
+
+        if ($this->role === UserRole::PROFESSIONAL) {
+            return true;
+        }
+
+        if ($this->role === UserRole::ADMIN) {
+            return true;
+        }
+
+        return $this->relationLoaded('professionalProfile')
+            ? $this->professionalProfile !== null
+            : $this->professionalProfile()->exists();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function capabilities(): array
+    {
+        $caps = [];
+        if ($this->canActAsClient()) {
+            $caps[] = 'client';
+        }
+        if ($this->canActAsProfessional()) {
+            $caps[] = 'professional';
+        }
+        if ($this->isAdmin()) {
+            $caps[] = 'admin';
+        }
+
+        return $caps;
+    }
+
+    public function resolveActiveMode(?string $requestedMode = null): string
+    {
+        if ($requestedMode === 'professional' && $this->canActAsProfessional()) {
+            return 'professional';
+        }
+
+        if ($requestedMode === 'client' && $this->canActAsClient()) {
+            return 'client';
+        }
+
+        if ($this->role === UserRole::PROFESSIONAL) {
+            return 'professional';
+        }
+
+        return 'client';
     }
 
     public function isActive(): bool
@@ -82,11 +142,21 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     public function dashboardRoute(): string
     {
-        return match ($this->role) {
-            UserRole::CLIENT => 'client.dashboard',
-            UserRole::PROFESSIONAL => 'professional.dashboard',
-            UserRole::ADMIN => 'admin.dashboard',
-        };
+        $mode = session('active_mode');
+        if ($mode === 'professional' && $this->canActAsProfessional()) {
+            return 'professional.dashboard';
+        }
+        if ($mode === 'client' && $this->canActAsClient()) {
+            return 'client.dashboard';
+        }
+        if ($this->isAdmin()) {
+            return 'admin.dashboard';
+        }
+        if ($this->role === UserRole::PROFESSIONAL) {
+            return 'professional.dashboard';
+        }
+
+        return 'client.dashboard';
     }
 
     public function professionalProfile(): HasOne

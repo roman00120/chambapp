@@ -12,12 +12,28 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
-        $allowedRoles = collect($roles)
-            ->map(fn (string $role) => UserRole::tryFrom($role))
-            ->filter()
-            ->all();
+        if (! $user) {
+            abort(401, 'Debes iniciar sesión.');
+        }
 
-        if (! $user || ! in_array($user->role, $allowedRoles, true)) {
+        $allowed = false;
+        foreach ($roles as $role) {
+            $roleEnum = UserRole::tryFrom($role);
+            if ($roleEnum === UserRole::ADMIN && $user->isAdmin()) {
+                $allowed = true;
+                break;
+            }
+            if ($roleEnum === UserRole::CLIENT && $user->canActAsClient()) {
+                $allowed = true;
+                break;
+            }
+            if ($roleEnum === UserRole::PROFESSIONAL && $user->canActAsProfessional()) {
+                $allowed = true;
+                break;
+            }
+        }
+
+        if (! $allowed) {
             abort(403, 'No tienes permiso para acceder a esta sección.');
         }
 

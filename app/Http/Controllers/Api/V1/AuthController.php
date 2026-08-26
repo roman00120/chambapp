@@ -217,4 +217,32 @@ class AuthController extends Controller
 
         return response()->json(['data' => null, 'message' => 'Todos los tokens fueron revocados.']);
     }
+
+    public function switchActiveMode(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $targetMode = (string) $request->input('mode');
+
+        if ($targetMode === 'professional' && ! $user->canActAsProfessional()) {
+            return response()->json([
+                'message' => 'No tienes permisos para activar el modo profesional.',
+            ], 403);
+        }
+
+        if ($targetMode === 'client' && ! $user->canActAsClient()) {
+            return response()->json([
+                'message' => 'No tienes permisos para activar el modo cliente.',
+            ], 403);
+        }
+
+        $activeMode = $user->resolveActiveMode($targetMode);
+
+        return response()->json([
+            'data' => [
+                'active_mode' => $activeMode,
+                'user' => new UserResource($user),
+            ],
+            'message' => 'Modo activo actualizado correctamente.',
+        ]);
+    }
 }

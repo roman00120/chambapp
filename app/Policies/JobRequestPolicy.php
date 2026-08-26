@@ -14,13 +14,14 @@ class JobRequestPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === UserRole::CLIENT;
+        return $user->canActAsClient();
     }
 
     public function create(User $user, JobRequest $jobRequest): bool
     {
-        return $user->role === UserRole::PROFESSIONAL
+        return $user->canActAsProfessional()
             && $jobRequest->professional?->user_id === $user->getKey()
+            && $jobRequest->client_id !== $user->getKey()
             && in_array($jobRequest->status, [JobStatus::PENDING, JobStatus::ACCEPTED, JobStatus::MATCHED, JobStatus::AWAITING_QUOTE], true);
     }
 
@@ -105,12 +106,15 @@ class JobRequestPolicy
 
     private function isClientParticipant(User $user, JobRequest $jobRequest): bool
     {
-        return $user->role === UserRole::CLIENT && $jobRequest->client_id === $user->getKey();
+        return $user->canActAsClient()
+            && $jobRequest->client_id === $user->getKey()
+            && $jobRequest->professional?->user_id !== $user->getKey();
     }
 
     private function isProfessionalParticipant(User $user, JobRequest $jobRequest): bool
     {
-        return $user->role === UserRole::PROFESSIONAL
-            && $jobRequest->professional?->user_id === $user->getKey();
+        return $user->canActAsProfessional()
+            && $jobRequest->professional?->user_id === $user->getKey()
+            && $jobRequest->client_id !== $user->getKey();
     }
 }

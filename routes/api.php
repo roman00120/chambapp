@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/auth/active-mode', [AuthController::class, 'switchActiveMode']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
 

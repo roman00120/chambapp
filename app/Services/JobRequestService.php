@@ -17,6 +17,9 @@ class JobRequestService
     public function createImmediate(User $client, array $data, array $photos = []): JobRequest
     {
         $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
+        if ($service && $service->professional && $service->professional->user_id === $client->getKey()) {
+            throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+        }
         $paths = collect($photos)
             ->filter(fn ($photo) => $photo instanceof UploadedFile)
             ->map(fn (UploadedFile $photo) => Storage::disk('local')->putFile('on-demand/'.$client->getKey(), $photo))
@@ -47,6 +50,9 @@ class JobRequestService
     public function createScheduled(User $client, array $data): JobRequest
     {
         $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
+        if ($service && $service->professional && $service->professional->user_id === $client->getKey()) {
+            throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+        }
 
         return JobRequest::query()->create([
             'client_id' => $client->getKey(),

@@ -27,6 +27,9 @@ class ReviewService
             if ($job->client_id !== $client->getKey() || $job->status !== JobStatus::COMPLETED) {
                 throw new DomainException('Solo puedes calificar trabajos completados propios.');
             }
+            if ($job->professional?->user_id === $client->getKey()) {
+                throw new DomainException('No está permitido calificar tus propios servicios.');
+            }
             if ($job->review()->exists()) {
                 throw new DomainException('Este trabajo ya tiene una reseña.');
             }

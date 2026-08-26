@@ -11,8 +11,9 @@ class ReviewPolicy
 {
     public function create(User $user, JobRequest $jobRequest): bool
     {
-        return $user->isClient()
+        return $user->canActAsClient()
             && $jobRequest->client_id === $user->getKey()
+            && $jobRequest->professional?->user_id !== $user->getKey()
             && $jobRequest->status === JobStatus::COMPLETED
             && ! $jobRequest->review()->exists();
     }
@@ -36,7 +37,7 @@ class ReviewPolicy
 
     public function report(User $user, Review $review): bool
     {
-        return $user->isProfessional()
+        return $user->canActAsProfessional()
             && $review->professional?->user_id === $user->getKey();
     }
 }

@@ -44,7 +44,13 @@ class MercadoPagoService
 
     public function createPreference(Payment $payment): array
     {
-        $payment->loadMissing(['jobRequest.service', 'professional']);
+        $payment->loadMissing(['jobRequest.client', 'jobRequest.service', 'professional.user']);
+        if ($payment->jobRequest && $payment->jobRequest->client_id === $payment->professional?->user_id) {
+            throw new MercadoPagoException('No está permitido realizar pagos entre la misma cuenta de cliente y profesional.');
+        }
+        if ($payment->professional?->user?->email && $payment->jobRequest?->client?->email && strtolower((string) $payment->professional->user->email) === strtolower((string) $payment->jobRequest->client->email)) {
+            throw new MercadoPagoException('El comprador y el vendedor no pueden compartir la misma cuenta en Mercado Pago.');
+        }
         $token = $this->sellerToken($payment->professional);
         $expiration = $this->preferenceExpiration();
         $payload = [
