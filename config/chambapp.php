@@ -9,6 +9,11 @@ return [
         'platform_fee_percent' => env('CHAMBAPP_PLATFORM_FEE_PERCENT', '15'),
         'checkout_timeout' => (int) env('CHAMBAPP_PAYMENT_TIMEOUT', 10),
         'preference_lifetime_hours' => (int) env('CHAMBAPP_PAYMENT_PREFERENCE_HOURS', 24),
+        // OAuth authorization links must have a short, server-enforced lifetime.
+        'oauth_state_lifetime_seconds' => (int) env('MERCADOPAGO_OAUTH_STATE_LIFETIME', 600),
+        'read_retry_attempts' => (int) env('MERCADOPAGO_READ_RETRY_ATTEMPTS', 3),
+        'read_retry_base_milliseconds' => (int) env('MERCADOPAGO_READ_RETRY_BASE_MILLISECONDS', 250),
+        'read_retry_max_milliseconds' => (int) env('MERCADOPAGO_READ_RETRY_MAX_MILLISECONDS', 2000),
         'provider' => 'mercadopago',
     ],
     'commerce' => [

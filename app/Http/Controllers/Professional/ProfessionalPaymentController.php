@@ -36,6 +36,7 @@ class ProfessionalPaymentController extends Controller
         $request->session()->put('mercadopago.oauth', [
             'state' => $state,
             'user_id' => $request->user()->getKey(),
+            'issued_at' => now()->timestamp,
         ]);
 
         return redirect()->away($mercadoPago->authorizationUrl($state));
@@ -45,7 +46,10 @@ class ProfessionalPaymentController extends Controller
     {
         $oauth = $request->session()->pull('mercadopago.oauth');
         $receivedState = (string) $request->query('state');
-        if (! is_array($oauth) || ! hash_equals((string) ($oauth['state'] ?? ''), $receivedState) || (int) ($oauth['user_id'] ?? 0) !== $request->user()->getKey()) {
+        $stateLifetime = max(60, (int) config('chambapp.payments.oauth_state_lifetime_seconds', 600));
+        $issuedAt = is_array($oauth) ? filter_var($oauth['issued_at'] ?? null, FILTER_VALIDATE_INT) : false;
+        $stateExpired = $issuedAt === false || $issuedAt < now()->subSeconds($stateLifetime)->timestamp;
+        if (! is_array($oauth) || $stateExpired || ! hash_equals((string) ($oauth['state'] ?? ''), $receivedState) || (int) ($oauth['user_id'] ?? 0) !== $request->user()->getKey()) {
             return redirect()->route('professional.payments.settings')->withErrors(['payment' => 'No pudimos validar la conexión con Mercado Pago.']);
         }
         if (! filled($request->query('code'))) {

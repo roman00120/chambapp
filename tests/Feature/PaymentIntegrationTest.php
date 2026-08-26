@@ -221,6 +221,29 @@ class PaymentIntegrationTest extends TestCase
         $this->assertTrue($profile->isMercadoPagoConnected());
     }
 
+    public function test_expired_mercado_pago_oauth_state_is_rejected_without_exchanging_the_code(): void
+    {
+        [, , $professional] = $this->awaitingPaymentFixture(false);
+        config([
+            'services.mercadopago.client_id' => 'app-id',
+            'services.mercadopago.client_secret' => 'app-secret',
+            'chambapp.payments.oauth_state_lifetime_seconds' => 60,
+        ]);
+        Http::fake();
+
+        $this->actingAs($professional)->get(route('professional.payments.connect'))->assertRedirect();
+        $state = session('mercadopago.oauth.state');
+        $this->travel(61)->seconds();
+
+        $this->actingAs($professional)
+            ->get(route('professional.payments.oauth-callback', ['code' => 'expired-code', 'state' => $state]))
+            ->assertRedirect(route('professional.payments.settings'))
+            ->assertSessionHasErrors('payment');
+
+        Http::assertNothingSent();
+        $this->assertNull($professional->fresh()->professionalProfile->mercadopago_user_id);
+    }
+
     public function test_same_mercado_pago_seller_cannot_be_linked_to_two_professionals(): void
     {
         [, , $professional] = $this->awaitingPaymentFixture(false);

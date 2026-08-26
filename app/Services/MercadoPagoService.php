@@ -6,11 +6,15 @@ use App\Exceptions\MercadoPagoException;
 use App\Models\CommerceOrder;
 use App\Models\Payment;
 use App\Models\ProfessionalProfile;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class MercadoPagoService
 {
@@ -65,7 +69,7 @@ class MercadoPagoService
             'expiration_date_to' => $expiration['to'],
         ];
 
-        $response = $this->apiRequest($token)->post($this->apiUrl('/checkout/preferences'), $payload);
+        $response = $this->postOnce($this->apiRequest($token), $this->apiUrl('/checkout/preferences'), $payload, 'checkout_preference');
         $data = $this->responseData($response);
         if (! $response->successful() || ! filled(data_get($data, 'id')) || ! filled(data_get($data, 'init_point'))) {
             throw new MercadoPagoException('Mercado Pago no pudo crear la preferencia.');
@@ -86,7 +90,7 @@ class MercadoPagoService
         }
         $expiration = $this->preferenceExpiration();
 
-        $response = $this->apiRequest($token)->post($this->apiUrl('/checkout/preferences'), [
+        $response = $this->postOnce($this->apiRequest($token), $this->apiUrl('/checkout/preferences'), [
             'items' => [[
                 'id' => $externalReference,
                 'title' => Str::limit($title, 120),
@@ -121,7 +125,7 @@ class MercadoPagoService
 
     public function getPayment(string $providerPaymentId, ProfessionalProfile $professional): array
     {
-        $response = $this->apiRequest($this->sellerToken($professional))->get($this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
+        $response = $this->getWithRetry($this->sellerToken($professional), $this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
         $data = $this->responseData($response);
         if (! $response->successful() || $data === null) {
             throw new MercadoPagoException('Mercado Pago no pudo consultar el pago.');
@@ -136,7 +140,7 @@ class MercadoPagoService
         if ($token === '') {
             throw new MercadoPagoException('Mercado Pago de plataforma no está configurado.');
         }
-        $response = $this->apiRequest($token)->get($this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
+        $response = $this->getWithRetry($token, $this->apiUrl('/v1/payments/'.rawurlencode($providerPaymentId)));
         $data = $this->responseData($response);
         if (! $response->successful() || $data === null) {
             throw new MercadoPagoException('Mercado Pago no pudo consultar el pago.');
@@ -151,14 +155,14 @@ class MercadoPagoService
     public function searchPayments(Payment $payment): array
     {
         $payment->loadMissing('professional');
-        $request = $this->apiRequest($this->sellerToken($payment->professional));
+        $token = $this->sellerToken($payment->professional);
         $results = [];
         $offset = 0;
         $limit = 30;
 
         do {
             $pageLimit = min($limit, 100 - $offset);
-            $response = $request->get($this->apiUrl('/v1/payments/search'), [
+            $response = $this->getWithRetry($token, $this->apiUrl('/v1/payments/search'), [
                 'external_reference' => $payment->external_reference,
                 'sort' => 'date_created',
                 'criteria' => 'desc',
@@ -195,14 +199,13 @@ class MercadoPagoService
         if ($token === '') {
             throw new MercadoPagoException('Mercado Pago de plataforma no está configurado.');
         }
-        $request = $this->apiRequest($token);
         $results = [];
         $offset = 0;
         $limit = 30;
 
         do {
             $pageLimit = min($limit, 100 - $offset);
-            $response = $request->get($this->apiUrl('/v1/payments/search'), [
+            $response = $this->getWithRetry($token, $this->apiUrl('/v1/payments/search'), [
                 'external_reference' => $order->external_reference,
                 'sort' => 'date_created',
                 'criteria' => 'desc',
@@ -256,14 +259,13 @@ class MercadoPagoService
 
     private function oauthRequest(array $payload): array
     {
-        $response = Http::asForm()
+        $response = $this->postOnce(Http::asForm()
             ->acceptJson()
             ->connectTimeout(min(5, (int) config('chambapp.payments.checkout_timeout', 10)))
-            ->timeout((int) config('chambapp.payments.checkout_timeout', 10))
-            ->post($this->apiUrl('/oauth/token'), array_merge([
+            ->timeout((int) config('chambapp.payments.checkout_timeout', 10)), $this->apiUrl('/oauth/token'), array_merge([
                 'client_id' => config('services.mercadopago.client_id'),
                 'client_secret' => config('services.mercadopago.client_secret'),
-            ], $payload));
+            ], $payload), 'oauth_token');
 
         $data = $this->responseData($response);
         if (! $response->successful() || ! filled(data_get($data, 'access_token'))) {
@@ -279,6 +281,63 @@ class MercadoPagoService
             ->withToken($token)
             ->connectTimeout(min(5, (int) config('chambapp.payments.checkout_timeout', 10)))
             ->timeout((int) config('chambapp.payments.checkout_timeout', 10));
+    }
+
+    /**
+     * GETs are safe to retry: they only read provider state. POST operations are deliberately
+     * sent once because Checkout Pro Preferences and OAuth do not document an idempotency key.
+     * An ambiguous POST outcome is surfaced to the caller rather than risking a duplicate resource.
+     *
+     * @param array<string, mixed> $query
+     */
+    private function getWithRetry(string $token, string $url, array $query = []): Response
+    {
+        try {
+            return $this->apiRequest($token)
+                ->retry(
+                    max(1, (int) config('chambapp.payments.read_retry_attempts', 3)),
+                    fn (int $attempt, Throwable $exception): int => $this->retryDelayMilliseconds($attempt, $exception),
+                    function (Throwable $exception): bool {
+                        $status = $exception instanceof RequestException ? $exception->response->status() : null;
+                        $retryable = $exception instanceof ConnectionException || in_array($status, [429, 500, 502, 503, 504], true);
+                        if ($retryable) {
+                            Log::warning('Retrying safe Mercado Pago read request', ['http_status' => $status]);
+                        }
+
+                        return $retryable;
+                    },
+                )
+                ->throw()
+                ->get($url, $query);
+        } catch (ConnectionException|RequestException $exception) {
+            throw new MercadoPagoException('Mercado Pago no pudo completar una consulta segura.', previous: $exception);
+        }
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function postOnce(PendingRequest $request, string $url, array $payload, string $operation): Response
+    {
+        try {
+            return $request->post($url, $payload);
+        } catch (ConnectionException $exception) {
+            Log::warning('Mercado Pago write request failed without automatic retry', ['operation' => $operation]);
+
+            throw new MercadoPagoException('Mercado Pago no pudo completar la operaciÃ³n. No se reintentÃ³ automÃ¡ticamente.', previous: $exception);
+        }
+    }
+
+    private function retryDelayMilliseconds(int $attempt, Throwable $exception): int
+    {
+        $retryAfter = $exception instanceof RequestException ? $exception->response->header('Retry-After') : null;
+        if (is_string($retryAfter) && ctype_digit($retryAfter)) {
+            return min(10000, max(0, ((int) $retryAfter) * 1000));
+        }
+
+        $base = max(0, (int) config('chambapp.payments.read_retry_base_milliseconds', 250));
+        $cap = max($base, (int) config('chambapp.payments.read_retry_max_milliseconds', 2000));
+        $backoff = min($cap, $base * (2 ** max(0, $attempt - 1)));
+
+        return $backoff === 0 ? 0 : min($cap, $backoff + random_int(0, max(1, intdiv($backoff, 4))));
     }
 
     /** @return array<string, mixed>|null */
