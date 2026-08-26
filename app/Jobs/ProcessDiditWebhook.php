@@ -19,7 +19,10 @@ class ProcessDiditWebhook implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [30, 120, 300];
 
-    public function __construct(public readonly int $eventId) {}
+    public function __construct(public readonly int $eventId)
+    {
+        $this->onQueue('didit');
+    }
 
     public function handle(DiditIdentityVerificationService $service): void
     {

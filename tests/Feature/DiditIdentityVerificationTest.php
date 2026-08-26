@@ -329,6 +329,10 @@ class DiditIdentityVerificationTest extends TestCase
             ->assertJsonPath('duplicate', true);
         $this->assertDatabaseCount('didit_webhook_events', 1);
         Bus::assertDispatchedTimes(ProcessDiditWebhook::class, 1);
+        Bus::assertDispatched(
+            ProcessDiditWebhook::class,
+            fn (ProcessDiditWebhook $job): bool => $job->queue === 'didit',
+        );
 
         $invalidPayload = str_replace('event-123', 'event-invalid', $raw);
         $this->callWebhook($invalidPayload, $timestamp, 'invalid')->assertUnauthorized();
