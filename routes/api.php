@@ -21,6 +21,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/professionals/{professional}/reviews', [PublicController::class, 'reviews'])->name('api.v1.professionals.reviews');
 
     Route::prefix('auth')->group(function (): void {
+        Route::get('/registration-requirements', [AuthController::class, 'registrationRequirements'])->middleware('throttle:api-read');
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:api-register');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:api-login');
         Route::post('/google', [AuthController::class, 'google'])->middleware('throttle:api-login');

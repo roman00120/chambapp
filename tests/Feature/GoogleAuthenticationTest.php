@@ -44,7 +44,10 @@ class GoogleAuthenticationTest extends TestCase
     {
         $this->mockGoogleUser($this->googleUser('google-123', 'PRO@Example.com', 'Ana Profesional'));
 
-        $this->withSession(['google_account_type' => 'professional'])
+        $this->withSession([
+            'google_account_type' => 'professional',
+            'google_registration_flow' => true,
+        ])
             ->get(route('auth.google.callback'))
             ->assertRedirect(route('professional.dashboard'));
 
@@ -53,6 +56,55 @@ class GoogleAuthenticationTest extends TestCase
         $this->assertSame(UserRole::PROFESSIONAL, $user->role);
         $this->assertNotNull($user->email_verified_at);
         $this->assertDatabaseHas('professional_profiles', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('professional_identity_verifications', [
+            'professional_id' => $user->professionalProfile->id,
+            'status' => 'not_started',
+        ]);
+    }
+
+    public function test_direct_google_callback_cannot_create_an_account_without_registration_flow(): void
+    {
+        $this->mockGoogleUser($this->googleUser('google-direct', 'direct@example.com', 'Registro directo'));
+
+        $this->withSession(['google_account_type' => 'client'])
+            ->get(route('auth.google.callback'))
+            ->assertUnprocessable();
+
+        $this->assertDatabaseMissing('users', ['email' => 'direct@example.com']);
+    }
+
+    public function test_google_registration_records_exact_current_legal_versions(): void
+    {
+        config([
+            'chambapp.legal.registration_acceptance_required' => true,
+            'chambapp.legal.documents_final' => true,
+            'chambapp.legal.documents.terms.version' => '2026-08-26',
+            'chambapp.legal.documents.privacy.version' => '2026-08-26',
+        ]);
+        $this->mockGoogleUser($this->googleUser('google-legal', 'legal@example.com', 'Registro legal'));
+
+        $this->withSession([
+            'google_account_type' => 'client',
+            'google_registration_flow' => true,
+            'google_legal_registration' => [
+                'legal_accepted' => true,
+                'legal_documents' => [
+                    'terms' => '2026-08-26',
+                    'privacy' => '2026-08-26',
+                ],
+                'legal_platform' => 'web_google',
+                'legal_ip' => '127.0.0.1',
+                'legal_user_agent' => 'test-browser',
+            ],
+        ])->get(route('auth.google.callback'))
+            ->assertRedirect(route('client.dashboard'));
+
+        $user = User::query()->where('email', 'legal@example.com')->firstOrFail();
+        $this->assertSame(2, $user->legalAcceptances()->count());
+        $this->assertTrue($user->legalAcceptances()->get()->every(
+            fn ($acceptance): bool => $acceptance->platform === 'web_google'
+                && $acceptance->document_version === '2026-08-26',
+        ));
     }
 
     public function test_google_callback_links_an_existing_email_without_changing_its_role(): void

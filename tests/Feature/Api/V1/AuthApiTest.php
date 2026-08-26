@@ -126,6 +126,35 @@ class AuthApiTest extends TestCase
         ]);
     }
 
+    public function test_google_api_cannot_create_a_new_account_without_current_legal_acceptance(): void
+    {
+        config([
+            'services.google.client_id' => 'web-client.apps.googleusercontent.com',
+            'chambapp.legal.registration_acceptance_required' => true,
+            'chambapp.legal.documents_final' => true,
+            'chambapp.legal.documents.terms.version' => '2026-08-26',
+            'chambapp.legal.documents.privacy.version' => '2026-08-26',
+        ]);
+        Http::fake([
+            'oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'aud' => 'web-client.apps.googleusercontent.com',
+                'iss' => 'https://accounts.google.com',
+                'exp' => (string) now()->addHour()->timestamp,
+                'sub' => 'google-legal-required',
+                'email' => 'google-legal@example.test',
+                'email_verified' => 'true',
+                'name' => 'Google Legal',
+            ]),
+        ]);
+
+        $this->postJson('/api/v1/auth/google', [
+            'id_token' => 'valid-google-id-token',
+            'device_name' => 'Pixel',
+        ])->assertUnprocessable()->assertJsonValidationErrors('legal_accepted');
+
+        $this->assertDatabaseMissing('users', ['email' => 'google-legal@example.test']);
+    }
+
     public function test_google_login_rejects_a_token_for_another_oauth_client(): void
     {
         config(['services.google.client_id' => 'expected-client.apps.googleusercontent.com']);

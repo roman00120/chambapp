@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Enums\IdentityVerificationStatus;
 use App\Enums\VerificationStatus;
 use App\Exceptions\IdentityVerificationRequiredException;
+use App\Models\Category;
 use App\Models\ProfessionalProfile;
 use App\Models\User;
 use App\Services\ProfessionalIdentityVerificationService;
+use App\Services\UserRegistrationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use App\Services\UserRegistrationService;
 use Tests\TestCase;
 
 class ProfessionalIdentityVerificationTest extends TestCase
@@ -117,6 +118,33 @@ class ProfessionalIdentityVerificationTest extends TestCase
         ])->assertForbidden()->assertJsonPath('code', 'IDENTITY_VERIFICATION_REQUIRED');
 
         $this->assertFalse($profile->fresh()->is_available);
+    }
+
+    public function test_required_verification_cannot_be_bypassed_when_creating_services_on_web_or_api(): void
+    {
+        config()->set('chambapp.identity_verification.required', true);
+        $profile = ProfessionalProfile::factory()->create();
+        $profile->identityVerification()->create(['status' => IdentityVerificationStatus::PENDING]);
+        $category = Category::factory()->create(['is_active' => true]);
+        $payload = [
+            'category_id' => $category->id,
+            'title' => 'Servicio bloqueado por identidad',
+            'description' => 'Una descripción suficientemente amplia para validar el servicio.',
+            'price_type' => 'fixed',
+            'price' => '500.00',
+        ];
+
+        $this->actingAs($profile->user)
+            ->from(route('professional.services.create'))
+            ->post(route('professional.services.store'), $payload)
+            ->assertRedirect(route('professional.identity-verification.show'));
+
+        Sanctum::actingAs($profile->user);
+        $this->postJson('/api/v1/professional/services', $payload)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'IDENTITY_VERIFICATION_REQUIRED');
+
+        $this->assertDatabaseCount('services', 0);
     }
 
     public function test_public_api_badge_uses_only_real_identity_status(): void

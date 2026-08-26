@@ -33,6 +33,9 @@ class RegisterRequest extends FormRequest
             'role' => ['required', Rule::in([UserRole::CLIENT->value, UserRole::PROFESSIONAL->value])],
             'password' => ['required', 'confirmed', Password::defaults()],
             'device_name' => ['required', 'string', 'max:100'],
+            'legal_accepted' => ['nullable'],
+            'legal_documents' => ['nullable', 'array'],
+            'legal_documents.*' => ['nullable', 'string', 'max:100'],
         ];
     }
 }

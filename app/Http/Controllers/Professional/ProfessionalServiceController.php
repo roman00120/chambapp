@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Professional;
 
 use App\Enums\PriceType;
+use App\Exceptions\IdentityVerificationRequiredException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Professional\StoreServiceRequest;
 use App\Http\Requests\Professional\UpdateServiceRequest;
 use App\Models\Category;
 use App\Models\Service;
+use App\Services\ProfessionalIdentityVerificationService;
 use App\Services\ProfessionalProfileService;
 use App\Services\ProfessionalServiceManager;
 use Illuminate\Http\RedirectResponse;
@@ -46,7 +48,13 @@ class ProfessionalServiceController extends Controller
     public function store(StoreServiceRequest $request): RedirectResponse
     {
         $profile = $this->profiles->profileFor($request->user());
-        $service = $this->services->create($profile, $request->validated(), $request->file('images', []));
+        try {
+            $service = $this->services->create($profile, $request->validated(), $request->file('images', []));
+        } catch (IdentityVerificationRequiredException $exception) {
+            return redirect()->route('professional.identity-verification.show')->withErrors([
+                'identity_verification' => $exception->getMessage(),
+            ]);
+        }
 
         return redirect()->route('professional.services.edit', $service)->with('status', 'Servicio publicado correctamente.');
     }
@@ -72,9 +80,18 @@ class ProfessionalServiceController extends Controller
         return redirect()->route('professional.services.edit', $service)->with('status', 'Servicio actualizado correctamente.');
     }
 
-    public function toggle(Service $service): RedirectResponse
+    public function toggle(Service $service, ProfessionalIdentityVerificationService $identityVerification): RedirectResponse
     {
         $this->authorize('update', $service);
+        if (! $service->is_active) {
+            try {
+                $identityVerification->ensureProfessionalCanAcceptJobs($service->professional);
+            } catch (IdentityVerificationRequiredException $exception) {
+                return redirect()->route('professional.identity-verification.show')->withErrors([
+                    'identity_verification' => $exception->getMessage(),
+                ]);
+            }
+        }
         $service->update(['is_active' => ! $service->is_active]);
 
         return back()->with('status', $service->is_active ? 'Servicio activado correctamente.' : 'Servicio desactivado correctamente.');

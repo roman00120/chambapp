@@ -39,6 +39,7 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MercadoPagoWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Professional\IdentityVerificationTransferController;
 use App\Http\Controllers\Professional\ProfessionalIdentityVerificationController;
 use App\Http\Controllers\Professional\ProfessionalPaymentController;
 use App\Http\Controllers\Professional\ProfessionalProfileController;
@@ -58,6 +59,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 Route::get('/health', HealthController::class)->name('health');
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+Route::get('/auth/google/consentimiento', [GoogleAuthController::class, 'consent'])->name('auth.google.consent');
+Route::post('/auth/google/registro', [GoogleAuthController::class, 'registrationRedirect'])->name('auth.google.register');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 Route::get('/compras/{state}', [CommerceController::class, 'purchaseReturn'])->whereIn('state', ['success', 'pending', 'error'])->name('commerce.return');
 Route::get('/compras/exito', fn () => app(CommerceController::class)->purchaseReturn('success'))->name('commerce.return.success');
@@ -115,6 +118,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
+
+Route::get('/verificacion/continuar/{token}', IdentityVerificationTransferController::class)
+    ->middleware(['auth', 'active', 'role:professional', 'throttle:identity-verification-transfer'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('identity-verification.transfer');
 
 Route::middleware(['auth', 'active', 'role:client'])
     ->prefix('cliente')
@@ -174,6 +182,9 @@ Route::middleware(['auth', 'active', 'role:professional'])
         Route::get('/verificacion-identidad/callback', [ProfessionalIdentityVerificationController::class, 'callback'])
             ->middleware('throttle:identity-verification-sync')
             ->name('identity-verification.callback');
+        Route::get('/verificacion-identidad/estado', [ProfessionalIdentityVerificationController::class, 'status'])
+            ->middleware('throttle:api-polling')
+            ->name('identity-verification.status');
         Route::get('/chambas', [ProfessionalOpportunityController::class, 'index'])->name('opportunities');
         Route::get('/chambas/estado', [ProfessionalOpportunityController::class, 'status'])->middleware('throttle:workflow')->name('opportunities.status');
         Route::post('/chambas/{invitation}/aceptar', [ProfessionalOpportunityController::class, 'accept'])->middleware('throttle:workflow')->name('opportunities.accept');

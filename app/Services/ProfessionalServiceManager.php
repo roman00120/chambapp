@@ -10,10 +10,15 @@ use Illuminate\Support\Str;
 
 class ProfessionalServiceManager
 {
-    public function __construct(private readonly ServiceImageManager $images) {}
+    public function __construct(
+        private readonly ServiceImageManager $images,
+        private readonly ProfessionalIdentityVerificationService $identityVerification,
+    ) {}
 
     public function create(ProfessionalProfile $profile, array $data, array $files = []): Service
     {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($profile);
+
         return DB::transaction(function () use ($profile, $data, $files): Service {
             $service = $profile->services()->create([
                 'category_id' => $data['category_id'],

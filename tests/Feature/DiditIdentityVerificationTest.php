@@ -6,12 +6,14 @@ use App\Enums\IdentityVerificationStatus;
 use App\Exceptions\DiditException;
 use App\Jobs\ProcessDiditWebhook;
 use App\Models\DiditWebhookEvent;
+use App\Models\IdentityVerificationTransfer;
 use App\Models\ProfessionalProfile;
 use App\Models\User;
 use App\Services\DiditIdentityVerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
@@ -366,6 +368,118 @@ class DiditIdentityVerificationTest extends TestCase
         $this->assertSame('processed', $event->fresh()->processing_status);
         Http::assertSentCount(1);
         $this->assertDatabaseCount('professional_identity_verification_events', 1);
+    }
+
+    public function test_desktop_start_creates_only_a_temporary_single_use_bridge_url(): void
+    {
+        $profile = ProfessionalProfile::factory()->create();
+        Http::fake(['*' => Http::response($this->sessionResponse(), 201)]);
+
+        $response = $this->actingAs($profile->user)->post(route('professional.identity-verification.start'), [
+            'identity_consent' => true,
+        ])->assertRedirect(route('professional.identity-verification.show'));
+
+        $transferUrl = $response->getSession()->get('identity_mobile_transfer_url');
+        $this->assertIsString($transferUrl);
+        $this->assertStringStartsWith(url('/verificacion/continuar/'), $transferUrl);
+        $this->assertStringNotContainsString('didit-api-test-key', $transferUrl);
+        $this->assertStringNotContainsString('didit-webhook-test-secret', $transferUrl);
+        $this->assertMatchesRegularExpression('#^/verificacion/continuar/[A-Za-z0-9]{64}$#', (string) parse_url($transferUrl, PHP_URL_PATH));
+
+        $token = basename((string) parse_url($transferUrl, PHP_URL_PATH));
+        $transfer = IdentityVerificationTransfer::query()->firstOrFail();
+        $this->assertSame(hash('sha256', $token), $transfer->token_hash);
+        $this->assertSame(self::SESSION_ID, $transfer->provider_session_id);
+        $this->assertSame('https://verify.didit.me/session/test-token', $transfer->hosted_url);
+        $this->assertStringNotContainsString('test-token', (string) DB::table('identity_verification_transfers')->value('hosted_url'));
+    }
+
+    public function test_bridge_requires_same_authenticated_professional_and_is_single_use(): void
+    {
+        $owner = ProfessionalProfile::factory()->create();
+        $other = ProfessionalProfile::factory()->create();
+        Http::fake(['*' => Http::response($this->sessionResponse(), 201)]);
+        $response = $this->actingAs($owner->user)->post(route('professional.identity-verification.start'), [
+            'identity_consent' => true,
+        ]);
+        $transferUrl = $response->getSession()->get('identity_mobile_transfer_url');
+
+        auth()->logout();
+        $this->get($transferUrl)->assertRedirect(route('login'));
+        $this->actingAs($other->user)->get($transferUrl)->assertNotFound();
+        $this->assertNull(IdentityVerificationTransfer::query()->firstOrFail()->consumed_at);
+
+        $this->actingAs($owner->user)->get($transferUrl)
+            ->assertRedirect('https://verify.didit.me/session/test-token')
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->get($transferUrl)->assertGone();
+    }
+
+    public function test_bridge_rejects_expired_tampered_and_mismatched_sessions(): void
+    {
+        $profile = ProfessionalProfile::factory()->create();
+        Http::fake(['*' => Http::response($this->sessionResponse(), 201)]);
+        $response = $this->actingAs($profile->user)->post(route('professional.identity-verification.start'), [
+            'identity_consent' => true,
+        ]);
+        $transferUrl = $response->getSession()->get('identity_mobile_transfer_url');
+        $token = basename((string) parse_url($transferUrl, PHP_URL_PATH));
+
+        $this->get(route('identity-verification.transfer', ['token' => str_repeat('A', 64)]))->assertNotFound();
+        $transfer = IdentityVerificationTransfer::query()->firstOrFail();
+        $transfer->update(['expires_at' => now()->subSecond()]);
+        $this->get($transferUrl)->assertGone();
+
+        $transfer->update(['expires_at' => now()->addMinute(), 'provider_session_id' => 'another-session']);
+        $this->get(route('identity-verification.transfer', ['token' => $token]))->assertGone();
+        $this->assertNull($transfer->fresh()->consumed_at);
+    }
+
+    public function test_generating_multiple_links_revokes_the_old_link_and_keeps_same_didit_session(): void
+    {
+        $profile = ProfessionalProfile::factory()->create();
+        Http::fake(['*' => Http::response($this->sessionResponse(), 201)]);
+
+        $first = $this->actingAs($profile->user)->post(route('professional.identity-verification.start'), ['identity_consent' => true]);
+        $firstUrl = $first->getSession()->get('identity_mobile_transfer_url');
+        $second = $this->post(route('professional.identity-verification.start'), ['identity_consent' => true]);
+        $secondUrl = $second->getSession()->get('identity_mobile_transfer_url');
+
+        $this->assertNotSame($firstUrl, $secondUrl);
+        $transfers = IdentityVerificationTransfer::query()->orderBy('id')->get();
+        $this->assertCount(2, $transfers);
+        $this->assertNotNull($transfers[0]->revoked_at);
+        $this->assertNull($transfers[1]->revoked_at);
+        $this->assertSame($transfers[0]->provider_session_id, $transfers[1]->provider_session_id);
+        $this->get($firstUrl)->assertGone();
+        $this->get($secondUrl)->assertRedirect('https://verify.didit.me/session/test-token');
+    }
+
+    public function test_desktop_polling_returns_only_safe_server_confirmed_state(): void
+    {
+        $profile = ProfessionalProfile::factory()->create();
+        $profile->identityVerification()->create([
+            'verification_provider' => 'didit',
+            'provider_session_id' => self::SESSION_ID,
+            'status' => IdentityVerificationStatus::PENDING,
+        ]);
+
+        $this->actingAs($profile->user)->getJson(route('professional.identity-verification.status'))
+            ->assertOk()
+            ->assertJsonPath('status', 'pending')
+            ->assertJsonPath('identity_verified', false)
+            ->assertJsonMissing(['provider_session_id' => self::SESSION_ID])
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        $profile->identityVerification()->update([
+            'status' => IdentityVerificationStatus::VERIFIED,
+            'verified_at' => now(),
+        ]);
+        $this->getJson(route('professional.identity-verification.status'))
+            ->assertOk()
+            ->assertJsonPath('status', 'verified')
+            ->assertJsonPath('identity_verified', true);
     }
 
     /** @return array<string, mixed> */

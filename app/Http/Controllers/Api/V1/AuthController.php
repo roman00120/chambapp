@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\IdentityVerificationStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
@@ -11,6 +12,7 @@ use App\Http\Requests\Api\V1\RegisterRequest;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\ProfessionalProfile;
 use App\Models\User;
+use App\Services\LegalAcceptanceService;
 use App\Services\UserRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +26,9 @@ class AuthController extends Controller
     public function register(RegisterRequest $request, UserRegistrationService $registrations): JsonResponse
     {
         $data = $request->validated();
+        $data['legal_platform'] = $request->header('X-Chambapp-Platform') === 'flutter' ? 'flutter' : 'api';
+        $data['legal_ip'] = $request->ip();
+        $data['legal_user_agent'] = $request->userAgent();
         $user = $registrations->register([...$data, 'account_type' => $data['role']]);
         $user->sendEmailVerificationNotification();
         $token = $user->createToken($data['device_name'])->plainTextToken;
@@ -32,6 +37,18 @@ class AuthController extends Controller
             'data' => ['token' => $token, 'user' => new UserResource($user)],
             'message' => 'Cuenta creada correctamente.',
         ], 201);
+    }
+
+    public function registrationRequirements(Request $request, LegalAcceptanceService $legal): JsonResponse
+    {
+        $role = UserRole::tryFrom((string) $request->query('role'));
+        abort_unless(in_array($role, [UserRole::CLIENT, UserRole::PROFESSIONAL], true), 422);
+
+        return response()->json(['data' => [
+            'acceptance_required' => $legal->isRequired(),
+            'registration_available' => ! $legal->isRequired() || $legal->isReady(),
+            'documents' => $legal->publicDocuments($role),
+        ]])->withHeaders(['Cache-Control' => 'no-store']);
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -66,12 +83,15 @@ class AuthController extends Controller
         ]);
     }
 
-    public function google(Request $request): JsonResponse
+    public function google(Request $request, LegalAcceptanceService $legal): JsonResponse
     {
         $data = $request->validate([
             'id_token' => ['required', 'string', 'max:4096'],
             'device_name' => ['required', 'string', 'max:255'],
             'role' => ['sometimes', 'string', 'in:client,professional'],
+            'legal_accepted' => ['nullable'],
+            'legal_documents' => ['nullable', 'array'],
+            'legal_documents.*' => ['nullable', 'string', 'max:100'],
         ]);
 
         $clientId = trim((string) config('services.google.client_id'));
@@ -118,7 +138,14 @@ class AuthController extends Controller
         }
 
         $role = UserRole::tryFrom($data['role'] ?? UserRole::CLIENT->value) ?? UserRole::CLIENT;
-        $user = DB::transaction(function () use ($claims, $googleId, $email, $role): User {
+        $existingUser = User::query()->where('google_id', $googleId)->first()
+            ?? User::query()->where('email', $email)->first();
+        $legalDocuments = $existingUser ? [] : $legal->validateRegistration($data, $role);
+        $legalPlatform = $request->header('X-Chambapp-Platform') === 'flutter' ? 'flutter_google' : 'api_google';
+        $legalIp = $request->ip();
+        $legalUserAgent = $request->userAgent();
+
+        $user = DB::transaction(function () use ($claims, $googleId, $email, $role, $legal, $legalDocuments, $legalPlatform, $legalIp, $legalUserAgent): User {
             $user = User::query()->where('google_id', $googleId)->first()
                 ?? User::query()->where('email', $email)->first();
 
@@ -133,6 +160,7 @@ class AuthController extends Controller
                     'status' => UserStatus::ACTIVE,
                     'email_verified_at' => now(),
                 ]);
+                $legal->record($user, $legalDocuments, $legalPlatform, $legalIp, $legalUserAgent);
             } else {
                 $user->forceFill([
                     'google_id' => $googleId,
@@ -142,10 +170,11 @@ class AuthController extends Controller
             }
 
             if ($user->role === UserRole::PROFESSIONAL && ! $user->professionalProfile()->exists()) {
-                ProfessionalProfile::create([
+                $profile = ProfessionalProfile::create([
                     'user_id' => $user->id,
                     'verification_status' => VerificationStatus::UNVERIFIED,
                 ]);
+                $profile->identityVerification()->create(['status' => IdentityVerificationStatus::NOT_STARTED]);
             }
 
             return $user;

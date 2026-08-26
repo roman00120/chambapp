@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap';
+import QRCode from 'qrcode';
 import { submitConfirmedForm } from './confirmed-form-submit';
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -248,6 +249,79 @@ if (onDemandStatus) {
             }
         } catch (_) {
             // Polling is best effort; the page remains usable if the network drops.
+        }
+    };
+    const timer = window.setInterval(poll, interval);
+}
+
+const identityTransfer = document.querySelector('[data-identity-transfer]');
+if (identityTransfer) {
+    const transferUrl = identityTransfer.dataset.transferUrl;
+    const canvas = identityTransfer.querySelector('[data-transfer-qr]');
+    const copyButton = identityTransfer.querySelector('[data-copy-transfer-link]');
+    const copyStatus = identityTransfer.querySelector('[data-copy-transfer-status]');
+
+    if (transferUrl && canvas) {
+        QRCode.toCanvas(canvas, transferUrl, {
+            width: 280,
+            margin: 2,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#17221c', light: '#ffffff' },
+        }).catch(() => {
+            canvas.hidden = true;
+            if (copyStatus) copyStatus.textContent = 'No pudimos dibujar el QR. Usa el botón Copiar enlace.';
+        });
+    }
+
+    copyButton?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(transferUrl);
+        } catch (_) {
+            const temporary = document.createElement('textarea');
+            temporary.value = transferUrl;
+            temporary.setAttribute('readonly', '');
+            temporary.style.position = 'fixed';
+            temporary.style.opacity = '0';
+            document.body.appendChild(temporary);
+            temporary.select();
+            document.execCommand('copy');
+            temporary.remove();
+        }
+        if (copyStatus) copyStatus.textContent = 'Enlace copiado. No lo compartas con otra persona.';
+    });
+}
+
+const identityStatus = document.querySelector('[data-identity-verification-status]');
+if (identityStatus && ['pending', 'needs_review'].includes(identityStatus.dataset.currentStatus)) {
+    const statusUrl = identityStatus.dataset.statusUrl;
+    const interval = Number(identityStatus.dataset.pollInterval || 5000);
+    const label = identityStatus.querySelector('[data-identity-status-label]');
+    const message = identityStatus.querySelector('[data-identity-status-message]');
+    const labels = {
+        not_started: 'No iniciada',
+        pending: 'Pendiente',
+        needs_review: 'En revisión',
+        rejected: 'Rechazada',
+        expired: 'Expirada',
+        verified: 'Verificada',
+    };
+
+    const poll = async () => {
+        try {
+            const response = await fetch(statusUrl, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (label && labels[data.status]) label.textContent = labels[data.status];
+            if (message && data.message) message.textContent = data.message;
+            if (!['pending', 'needs_review'].includes(data.status)) {
+                window.clearInterval(timer);
+                window.setTimeout(() => window.location.reload(), 700);
+            }
+        } catch (_) {
+            // Polling is best effort; the signed webhook remains the source of truth.
         }
     };
     const timer = window.setInterval(poll, interval);

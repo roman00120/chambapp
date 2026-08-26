@@ -40,5 +40,27 @@ return [
         'provider' => env('PROFESSIONAL_IDENTITY_VERIFICATION_PROVIDER'),
         'consent_version' => env('PROFESSIONAL_IDENTITY_CONSENT_VERSION', 'draft-2026-08-25'),
         'privacy_notice_version' => env('PRIVACY_NOTICE_VERSION', 'draft-2026-08-25'),
+        'transfer_ttl_minutes' => (int) env('PROFESSIONAL_IDENTITY_TRANSFER_TTL_MINUTES', 10),
+        'polling_interval_seconds' => 5,
+    ],
+    'legal' => [
+        // Keep disabled until counsel approves complete, non-draft documents.
+        'registration_acceptance_required' => filter_var(env('LEGAL_REGISTRATION_ACCEPTANCE_REQUIRED', false), FILTER_VALIDATE_BOOL),
+        'documents_final' => filter_var(env('LEGAL_DOCUMENTS_FINAL', false), FILTER_VALIDATE_BOOL),
+        'professional_terms_enabled' => filter_var(env('PROFESSIONAL_TERMS_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'documents' => [
+            'terms' => [
+                'title' => 'Términos y Condiciones',
+                'version' => env('TERMS_VERSION', 'draft-2026-08-25'),
+                'route' => 'legal.terms',
+                'enabled' => true,
+            ],
+            'privacy' => [
+                'title' => 'Aviso de Privacidad',
+                'version' => env('PRIVACY_NOTICE_VERSION', 'draft-2026-08-25'),
+                'route' => 'legal.privacy',
+                'enabled' => true,
+            ],
+        ],
     ],
 ];

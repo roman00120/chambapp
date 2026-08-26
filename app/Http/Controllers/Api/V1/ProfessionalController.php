@@ -91,11 +91,15 @@ class ProfessionalController extends Controller
         ProfessionalProfileService $profiles,
         ProfessionalServiceManager $services,
     ): JsonResponse {
-        $service = $services->create(
-            $profiles->profileFor($request->user()),
-            $request->validated(),
-            $request->file('images', []),
-        );
+        try {
+            $service = $services->create(
+                $profiles->profileFor($request->user()),
+                $request->validated(),
+                $request->file('images', []),
+            );
+        } catch (DomainException $exception) {
+            return $this->domainError($exception, 'SERVICE_UNAVAILABLE');
+        }
 
         return response()->json([
             'data' => new ServiceResource($service),
