@@ -103,6 +103,28 @@ class ProfessionalProfile extends Model
         return $this->location_updated_at?->gte(now()->subMinutes((int) config('chambapp.on_demand.location_freshness_minutes', 30))) ?? false;
     }
 
+    public function profilePhotoUrl(): ?string
+    {
+        if (! $this->profile_photo) {
+            return $this->user?->avatar_url;
+        }
+
+        if (preg_match('/^https?:\/\//i', $this->profile_photo)) {
+            return $this->profile_photo;
+        }
+
+        if (str_starts_with($this->profile_photo, '/')) {
+            return $this->profile_photo;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_photo);
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        return $this->profilePhotoUrl();
+    }
+
     public function canReceiveImmediateJobs(): bool
     {
         return $this->is_available

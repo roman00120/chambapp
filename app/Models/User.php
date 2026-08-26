@@ -62,6 +62,24 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return filled($this->google_id);
     }
 
+    public function profilePhotoUrl(): ?string
+    {
+        $profile = $this->relationLoaded('professionalProfile')
+            ? $this->professionalProfile
+            : $this->professionalProfile()->first();
+
+        if ($profile && $profile->profile_photo) {
+            return $profile->profilePhotoUrl();
+        }
+
+        return $this->avatar_url;
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        return $this->profilePhotoUrl();
+    }
+
     public function dashboardRoute(): string
     {
         return match ($this->role) {

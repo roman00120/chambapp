@@ -10,10 +10,13 @@ class ProfessionalResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $photoUrl = $this->profilePhotoUrl();
+
         return [
             'id' => $this->id,
             'name' => $this->user?->name,
-            'avatar' => $this->profile_photo ? url(Storage::disk('public')->url($this->profile_photo)) : $this->user?->avatar_url,
+            'avatar' => $photoUrl,
+            'profile_photo_url' => $photoUrl,
             'bio' => $this->bio,
             'experience_years' => $this->experience_years,
             'city' => $this->city,

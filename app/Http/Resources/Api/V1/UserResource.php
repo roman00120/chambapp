@@ -10,11 +10,8 @@ class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $profile = $this->resource->relationLoaded('professionalProfile') ? $this->professionalProfile : null;
-        $avatar = $this->avatar_url;
-        if (! $avatar && $profile && $profile->profile_photo) {
-            $avatar = url(Storage::disk('public')->url($profile->profile_photo));
-        }
+        $profile = $this->resource->relationLoaded('professionalProfile') ? $this->professionalProfile : $this->resource->professionalProfile;
+        $avatar = $profile?->profilePhotoUrl() ?? $this->avatar_url;
 
         return [
             'id' => $this->id,
@@ -22,6 +19,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role?->value,
             'avatar' => $avatar,
+            'profile_photo_url' => $avatar,
             'phone' => $this->when($request->user()?->is($this->resource), $this->phone),
             'status' => $this->status?->value,
             'email_verified' => $this->when($request->user()?->is($this->resource), $this->hasVerifiedEmail()),
