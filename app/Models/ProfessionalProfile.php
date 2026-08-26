@@ -98,6 +98,11 @@ class ProfessionalProfile extends Model
         return $this->hasMany(JobInvitation::class, 'professional_id');
     }
 
+    public function achievements(): HasMany
+    {
+        return $this->hasMany(UserAchievement::class, 'user_id', 'user_id');
+    }
+
     public function isLocationFresh(): bool
     {
         return $this->location_updated_at?->gte(now()->subMinutes((int) config('chambapp.on_demand.location_freshness_minutes', 30))) ?? false;
@@ -148,25 +153,6 @@ class ProfessionalProfile extends Model
     public function isComplete(): bool
     {
         return $this->completionPercentage() === 100;
-    }
-
-    public function achievements(): array
-    {
-        $items = [];
-        if ($this->total_completed_jobs >= 1) {
-            $items[] = ['icon' => 'bi-check2-circle', 'title' => 'Primer trabajo', 'text' => 'Completaste tu primera chamba.'];
-        }
-        if ($this->total_completed_jobs >= 5) {
-            $items[] = ['icon' => 'bi-award', 'title' => 'Constante', 'text' => 'Cinco trabajos completados correctamente.'];
-        }
-        if ($this->total_completed_jobs >= 10) {
-            $items[] = ['icon' => 'bi-trophy', 'title' => 'Experto en acción', 'text' => 'Diez trabajos completados.'];
-        }
-        if ($this->total_reviews >= 3 && (float) $this->average_rating >= 4.5) {
-            $items[] = ['icon' => 'bi-star-fill', 'title' => 'Muy recomendado', 'text' => 'Calificación promedio superior a 4.5.'];
-        }
-
-        return $items;
     }
 
     public function isMercadoPagoConnected(): bool

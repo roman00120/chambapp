@@ -38,6 +38,7 @@ class ProfessionalResource extends JsonResource
             'location_updated_at' => $this->when($request->user()?->id === $this->user_id, $this->location_updated_at?->toIso8601String()),
             'services' => ServiceResource::collection($this->whenLoaded('services')),
             'recent_reviews' => ReviewResource::collection($this->whenLoaded('reviews')),
+            'achievements' => app(\App\Services\AchievementService::class)->getPublicAchievementsForProfessional($this->resource),
         ];
     }
 }

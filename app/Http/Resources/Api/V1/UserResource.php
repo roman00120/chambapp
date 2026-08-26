@@ -32,6 +32,7 @@ class UserResource extends JsonResource
                 $profile !== null,
                 fn () => new ProfessionalResource($profile),
             ),
+            'achievements' => app(\App\Services\AchievementService::class)->getPublicAchievementsForUser($this->resource),
         ];
     }
 }

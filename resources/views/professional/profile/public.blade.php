@@ -36,6 +36,41 @@
                 </div>
                 <div class="col-12 col-lg-8"><div class="d-flex align-items-end justify-content-between gap-3 mb-3"><div><p class="eyebrow mb-2">Servicios publicados</p><h2 class="section-title mb-0">Lo que puede hacer por ti</h2></div><span class="text-muted small">{{ $profile->services->count() }} disponibles</span></div><div class="row g-3">@forelse ($profile->services as $service)<div class="col-12 col-md-6"><x-service-card :service="$service" :is-favorite="$isFavorite" /></div>@empty<div class="col-12"><x-ui.empty-state icon="bi-tools" title="Aún no hay servicios publicados" description="Este profesional todavía no tiene servicios activos para mostrar." /></div>@endforelse</div></div>
             </div>
+            @php
+                $allAchievements = app(\App\Services\AchievementService::class)->getPublicAchievementsForProfessional($profile);
+            @endphp
+            @if ($allAchievements->isNotEmpty())
+                <div class="row g-4 mt-2">
+                    <div class="col-12 col-lg-8">
+                        <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+                            <div>
+                                <p class="eyebrow mb-2">Mérito y Trayectoria</p>
+                                <h2 class="section-title mb-0">Reconocimientos y Medallas</h2>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            @foreach ($allAchievements as $ach)
+                                <div class="col-12 col-md-6">
+                                    <div class="card shadow-sm border-0 h-100 p-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning">
+                                                <i class="bi bi-{{ $ach['icon'] }} fs-3"></i>
+                                            </div>
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <h5 class="card-title mb-0 h6 fw-bold">{{ $ach['name'] }}</h5>
+                                                    <span class="badge bg-warning text-dark">{{ $ach['level_label'] }}</span>
+                                                </div>
+                                                <p class="small text-muted mb-0 mt-1">{{ $ach['description'] }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
             <div class="row g-4 mt-1"><div class="col-12 col-lg-8"><div class="d-flex align-items-end justify-content-between gap-3 mb-3"><div><p class="eyebrow mb-2">Experiencias confirmadas</p><h2 class="section-title mb-0">Reseñas recientes</h2></div>@if ($profile->total_reviews > 5)<a class="text-link" href="{{ route('reviews.index', $profile) }}">Ver todas <i class="bi bi-arrow-right" aria-hidden="true"></i></a>@endif</div><div class="review-list">@forelse ($profile->reviews as $review)<x-review-card :review="$review" :reportable="true" />@empty<x-ui.empty-state icon="bi-star" title="Este profesional todavía no tiene reseñas." description="Las opiniones aparecerán después de trabajos completados en Chambapp." />@endforelse</div></div></div>
         </div>
     </section>

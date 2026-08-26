@@ -250,6 +250,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(DisciplinaryAppeal::class, 'user_id');
     }
 
+    public function achievements(): HasMany
+    {
+        return $this->hasMany(UserAchievement::class, 'user_id');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'client_id');
