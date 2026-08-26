@@ -69,7 +69,7 @@ return new class extends Migration
             Schema::create('professional_identity_verification_events', function (Blueprint $table): void {
                 $table->id();
                 $table->foreignId('identity_verification_id');
-                $table->string('provider_session_id', 191)->nullable()->index();
+                $table->string('provider_session_id', 191)->nullable();
                 $table->string('source', 30);
                 $table->string('from_status', 30)->nullable();
                 $table->string('to_status', 30);
@@ -79,21 +79,28 @@ return new class extends Migration
 
                 $table->foreign('identity_verification_id', 'didit_event_verification_fk')
                     ->references('id')->on('professional_identity_verifications')->cascadeOnDelete();
+                $table->index('provider_session_id', 'didit_event_session_idx');
             });
+        } else {
+            $this->repairVerificationEventTable();
         }
 
         if (! Schema::hasTable('didit_webhook_events')) {
             Schema::create('didit_webhook_events', function (Blueprint $table): void {
                 $table->id();
-                $table->string('event_id', 191)->unique();
+                $table->string('event_id', 191);
                 $table->string('webhook_type', 100);
-                $table->string('provider_session_id', 191)->index();
+                $table->string('provider_session_id', 191);
                 $table->char('payload_hash', 64);
-                $table->string('processing_status', 30)->default('received')->index();
+                $table->string('processing_status', 30)->default('received');
                 $table->string('failure_code', 100)->nullable();
                 $table->timestamp('received_at');
                 $table->timestamp('processed_at')->nullable();
                 $table->timestamps();
+
+                $table->unique('event_id', 'didit_webhook_event_unique');
+                $table->index('provider_session_id', 'didit_webhook_session_idx');
+                $table->index('processing_status', 'didit_webhook_status_idx');
             });
         }
     }
@@ -156,6 +163,59 @@ return new class extends Migration
         if (! $consentIndexExists) {
             Schema::table('professional_identity_verification_consents', function (Blueprint $table): void {
                 $table->index(['professional_id', 'accepted_at'], 'identity_consent_professional_date');
+            });
+        }
+    }
+
+    private function repairVerificationEventTable(): void
+    {
+        $requiredColumns = [
+            'identity_verification_id',
+            'provider_session_id',
+            'source',
+            'from_status',
+            'to_status',
+            'reason_code',
+            'occurred_at',
+            'created_at',
+            'updated_at',
+        ];
+
+        foreach ($requiredColumns as $column) {
+            if (! Schema::hasColumn('professional_identity_verification_events', $column)) {
+                throw new RuntimeException("The partial Didit event table is missing the {$column} column.");
+            }
+        }
+
+        if (DB::getDriverName() !== 'mysql') {
+            throw new RuntimeException('Partial Didit migration recovery is only supported on MySQL.');
+        }
+
+        $foreignKeyExists = DB::selectOne(
+            <<<'SQL'
+                select 1 as present
+                from information_schema.key_column_usage
+                where table_schema = database()
+                  and table_name = 'professional_identity_verification_events'
+                  and column_name = 'identity_verification_id'
+                  and referenced_table_name is not null
+                limit 1
+                SQL,
+        ) !== null;
+
+        if (! $foreignKeyExists) {
+            Schema::table('professional_identity_verification_events', function (Blueprint $table): void {
+                $table->foreign('identity_verification_id', 'didit_event_verification_fk')
+                    ->references('id')->on('professional_identity_verifications')->cascadeOnDelete();
+            });
+        }
+
+        $sessionIndexExists = collect(Schema::getIndexes('professional_identity_verification_events'))
+            ->contains(fn (array $index): bool => $index['name'] === 'didit_event_session_idx');
+
+        if (! $sessionIndexExists) {
+            Schema::table('professional_identity_verification_events', function (Blueprint $table): void {
+                $table->index('provider_session_id', 'didit_event_session_idx');
             });
         }
     }
