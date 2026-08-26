@@ -32,7 +32,18 @@ class ProfessionalController extends Controller
 
     public function show(ProfessionalProfile $professional): View
     {
-        $professional->load(['user', 'verifiedBy', 'identityVerification', 'credentials.category', 'services.category', 'reviews' => fn ($query) => $query->visible()->with('client')->latest()->limit(10), 'jobRequests.client', 'jobRequests.service', 'payments.jobRequest']);
+        $professional->load([
+            'user',
+            'verifiedBy',
+            'identityVerification.consents' => fn ($query) => $query->latest('accepted_at')->limit(5),
+            'identityVerification.events' => fn ($query) => $query->latest('occurred_at')->limit(10),
+            'credentials.category',
+            'services.category',
+            'reviews' => fn ($query) => $query->visible()->with('client')->latest()->limit(10),
+            'jobRequests.client',
+            'jobRequests.service',
+            'payments.jobRequest',
+        ]);
 
         return view('admin.professionals.show', compact('professional'));
     }

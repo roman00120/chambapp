@@ -11,8 +11,10 @@
                     <p class="eyebrow">Información legal</p>
                     <h1 class="page-title">Términos y condiciones</h1>
                     <div class="ui-card mt-4 p-4">
-                        <p>Esta página es un borrador operativo del MVP y debe ser revisada y aprobada por asesoría legal antes de un lanzamiento comercial.</p>
-                        <p class="mb-0">Chambapp conecta clientes con profesionales. Los alcances, responsabilidades, cancelaciones, pagos, comisiones y mecanismos de atención deben quedar definidos en la versión legal final.</p>
+                        <p><strong>Borrador sujeto a revisión jurídica.</strong> Debe ser revisado y aprobado por asesoría legal antes del lanzamiento comercial definitivo.</p>
+                        <p>Chambapp puede solicitar a los profesionales una verificación de identidad mediante un proveedor externo. La verificación de identidad es independiente de la moderación del perfil y de las credenciales profesionales.</p>
+                        <p>Un resultado de identidad verificada no garantiza calidad del servicio, licencias, antecedentes, solvencia ni el resultado de una contratación. Cuando la política de verificación sea obligatoria, no completarla puede limitar funciones profesionales.</p>
+                        <p class="mb-0">Los alcances, responsabilidades, cancelaciones, pagos, comisiones, conservación de evidencia y mecanismos de atención deben quedar definidos en la versión legal final.</p>
                     </div>
                 </div>
             </div>

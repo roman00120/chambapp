@@ -27,6 +27,7 @@ use App\Http\Controllers\ClientQuoteController;
 use App\Http\Controllers\CommerceController;
 use App\Http\Controllers\Dashboard\ClientDashboardController;
 use App\Http\Controllers\Dashboard\ProfessionalDashboardController;
+use App\Http\Controllers\DiditWebhookController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HomeController;
@@ -38,9 +39,9 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MercadoPagoWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Professional\ProfessionalIdentityVerificationController;
 use App\Http\Controllers\Professional\ProfessionalPaymentController;
 use App\Http\Controllers\Professional\ProfessionalProfileController;
-use App\Http\Controllers\Professional\ProfessionalIdentityVerificationController;
 use App\Http\Controllers\Professional\ProfessionalServiceController;
 use App\Http\Controllers\Professional\ServiceImageController;
 use App\Http\Controllers\ProfessionalEarningsController;
@@ -64,6 +65,8 @@ Route::get('/compras/pendiente', fn () => app(CommerceController::class)->purcha
 Route::get('/compras/error', fn () => app(CommerceController::class)->purchaseReturn('error'))->name('commerce.return.error');
 Route::get('/terminos', [LegalController::class, 'terms'])->name('legal.terms');
 Route::get('/privacidad', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::view('/verificacion-identidad/regreso', 'professional.identity-verification.mobile-return')
+    ->name('identity-verification.mobile-return');
 Route::get('/sitemap.xml', fn () => response()->view('seo.sitemap', [], 200, ['Content-Type' => 'application/xml']))->name('sitemap');
 Route::get('/buscar', [MarketplaceController::class, 'search'])->name('marketplace.search');
 Route::get('/servicios', [MarketplaceController::class, 'search'])->name('marketplace.services');
@@ -78,6 +81,9 @@ Route::get('/pagos/error', [PaymentController::class, 'error'])->middleware(['au
 Route::post('/webhooks/mercadopago', MercadoPagoWebhookController::class)
     ->withoutMiddleware([ValidateCsrfToken::class])
     ->name('webhooks.mercadopago');
+Route::post('/webhooks/didit', DiditWebhookController::class)
+    ->withoutMiddleware([ValidateCsrfToken::class])
+    ->name('webhooks.didit');
 
 Route::middleware(['auth', 'active', 'role:client'])->group(function () {
     Route::get('/servicios/{service}/solicitar', [ClientJobRequestController::class, 'create'])->name('job-requests.create');
@@ -162,6 +168,12 @@ Route::middleware(['auth', 'active', 'role:professional'])
     ->group(function () {
         Route::get('/inicio', ProfessionalDashboardController::class)->name('dashboard');
         Route::get('/verificacion-identidad', ProfessionalIdentityVerificationController::class)->name('identity-verification.show');
+        Route::post('/verificacion-identidad/iniciar', [ProfessionalIdentityVerificationController::class, 'start'])
+            ->middleware('throttle:identity-verification-start')
+            ->name('identity-verification.start');
+        Route::get('/verificacion-identidad/callback', [ProfessionalIdentityVerificationController::class, 'callback'])
+            ->middleware('throttle:identity-verification-sync')
+            ->name('identity-verification.callback');
         Route::get('/chambas', [ProfessionalOpportunityController::class, 'index'])->name('opportunities');
         Route::get('/chambas/estado', [ProfessionalOpportunityController::class, 'status'])->middleware('throttle:workflow')->name('opportunities.status');
         Route::post('/chambas/{invitation}/aceptar', [ProfessionalOpportunityController::class, 'accept'])->middleware('throttle:workflow')->name('opportunities.accept');

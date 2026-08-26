@@ -33,5 +33,7 @@ return [
         // Keep false until a KYC provider is selected, integrated and tested.
         'required' => filter_var(env('PROFESSIONAL_IDENTITY_VERIFICATION_REQUIRED', false), FILTER_VALIDATE_BOOL),
         'provider' => env('PROFESSIONAL_IDENTITY_VERIFICATION_PROVIDER'),
+        'consent_version' => env('PROFESSIONAL_IDENTITY_CONSENT_VERSION', 'draft-2026-08-25'),
+        'privacy_notice_version' => env('PRIVACY_NOTICE_VERSION', 'draft-2026-08-25'),
     ],
 ];

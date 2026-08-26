@@ -45,6 +45,14 @@ return [
         'user_id' => env('MERCADOPAGO_USER_ID'),
     ],
 
+    'didit' => [
+        'api_url' => env('DIDIT_API_URL', 'https://verification.didit.me'),
+        'api_key' => env('DIDIT_API_KEY'),
+        'workflow_id' => env('DIDIT_WORKFLOW_ID'),
+        'webhook_secret' => env('DIDIT_WEBHOOK_SECRET'),
+        'timeout' => (int) env('DIDIT_TIMEOUT', 10),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

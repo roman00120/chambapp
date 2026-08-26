@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AdminOperationsController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -59,6 +59,8 @@ Route::prefix('v1')->group(function (): void {
 
         Route::prefix('professional')->middleware('role:professional')->group(function (): void {
             Route::get('/identity-verification', [ProfessionalIdentityVerificationController::class, 'show']);
+            Route::post('/identity-verification/start', [ProfessionalIdentityVerificationController::class, 'start'])->middleware('throttle:identity-verification-start');
+            Route::post('/identity-verification/sync', [ProfessionalIdentityVerificationController::class, 'sync'])->middleware('throttle:identity-verification-sync');
             Route::get('/profile', [ProfessionalController::class, 'profile']);
             Route::patch('/profile', [ProfessionalController::class, 'updateProfile']);
             Route::get('/jobs', [ProfessionalController::class, 'jobs']);

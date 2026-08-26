@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         $middleware->validateCsrfTokens(except: [
             'webhooks/mercadopago',
+            'webhooks/didit',
         ]);
         $middleware->alias([
             'active' => EnsureUserIsActive::class,

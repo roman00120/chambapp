@@ -260,6 +260,41 @@ paths:
           description: Estado mínimo de identidad, vigencia y elegibilidad operativa
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /professional/identity-verification/start:
+    post:
+      tags: [Professional]
+      summary: Iniciar una Hosted Session KYC con consentimiento explícito
+      description: Laravel crea la sesión server-side. Sólo devuelve la URL HTTPS alojada; nunca expone credenciales Didit ni permite establecer el estado.
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity_consent]
+              properties:
+                identity_consent: {type: boolean, enum: [true]}
+      responses:
+        '201': {description: Hosted Session creada o recuperada idempotentemente}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {description: Proveedor no configurado o temporalmente no disponible}
+  /professional/identity-verification/sync:
+    post:
+      tags: [Professional]
+      summary: Consultar server-side la decisión actual de Didit
+      description: Valida session_id, vendor_data y workflow_id antes de actualizar el estado oficial de Chambapp.
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Estado mínimo de identidad actualizado}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {description: Decision API temporalmente no disponible}
   /professional/availability:
     get:
       tags: [Professional]
