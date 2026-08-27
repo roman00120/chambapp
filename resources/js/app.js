@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { submitConfirmedForm } from './confirmed-form-submit';
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=4.0').catch(() => {}));
 }
 
 document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {

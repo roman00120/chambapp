@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chambapp-static-v3';
+const CACHE_NAME = 'chambapp-static-v4';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
     OFFLINE_URL,
@@ -22,9 +22,9 @@ self.addEventListener('activate', (event) => {
 });
 
 const isSensitivePath = (pathname) => /^(\/cliente|\/profesional|\/admin|\/trabajos|\/cotizaciones|\/pagos|\/notificaciones|\/webhooks)/.test(pathname);
-const isStaticAsset = (request, url) => request.method === 'GET'
+const isPwaStaticAsset = (request, url) => request.method === 'GET'
     && url.origin === self.location.origin
-    && (url.pathname.startsWith('/build/') || url.pathname.startsWith('/images/') || url.pathname === '/manifest.webmanifest');
+    && (url.pathname.startsWith('/images/pwa/') || url.pathname === '/manifest.webmanifest' || url.pathname === '/offline.html');
 
 self.addEventListener('fetch', (event) => {
     const request = event.request;
@@ -39,7 +39,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    if (isStaticAsset(request, url)) {
+    if (isPwaStaticAsset(request, url)) {
         event.respondWith(
             caches.match(request).then((cached) => {
                 if (cached && cached.status === 200) {
