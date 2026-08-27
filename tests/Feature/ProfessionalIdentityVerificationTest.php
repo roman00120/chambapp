@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\IdentityVerificationStatus;
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Exceptions\IdentityVerificationRequiredException;
 use App\Models\Category;
@@ -197,5 +199,111 @@ class ProfessionalIdentityVerificationTest extends TestCase
 
         $this->assertTrue($eligible->contains($verified->id));
         $this->assertFalse($eligible->contains($pending->id));
+    }
+
+    public function test_creator_accounts_have_explicit_kyc_exemption_without_didit_records(): void
+    {
+        config()->set('chambapp.identity_verification.required', true);
+        config()->set('chambapp.creator_emails', ['gerawx@gmail.com', 'romy00120@gmail.com']);
+        $service = app(ProfessionalIdentityVerificationService::class);
+
+        // 1. Creador 1: gerawx@gmail.com
+        $creator1 = User::factory()->create([
+            'email' => 'gerawx@gmail.com',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $profile1 = ProfessionalProfile::factory()->create(['user_id' => $creator1->id]);
+
+        $this->assertTrue($creator1->isCreator());
+        $this->assertTrue($service->hasCreatorExemption($profile1));
+        $this->assertTrue($profile1->hasVerifiedIdentity());
+        $this->assertSame(IdentityVerificationStatus::VERIFIED, $service->statusFor($profile1));
+        $this->assertTrue($service->professionalCanAcceptJobs($profile1));
+
+        // 2. Creador 2: romy00120@gmail.com
+        $creator2 = User::factory()->create([
+            'email' => 'romy00120@gmail.com',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $profile2 = ProfessionalProfile::factory()->create(['user_id' => $creator2->id]);
+
+        $this->assertTrue($creator2->isCreator());
+        $this->assertTrue($service->hasCreatorExemption($profile2));
+        $this->assertTrue($profile2->hasVerifiedIdentity());
+        $this->assertSame(IdentityVerificationStatus::VERIFIED, $service->statusFor($profile2));
+        $this->assertTrue($service->professionalCanAcceptJobs($profile2));
+
+        // 3. Otro admin (no creador) -> NO obtiene la excepción
+        $otherAdmin = User::factory()->create([
+            'email' => 'other-admin@chambapp.com.mx',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $otherAdminProfile = ProfessionalProfile::factory()->create(['user_id' => $otherAdmin->id]);
+
+        $this->assertFalse($otherAdmin->isCreator());
+        $this->assertFalse($service->hasCreatorExemption($otherAdminProfile));
+        $this->assertFalse($otherAdminProfile->hasVerifiedIdentity());
+        $this->assertSame(IdentityVerificationStatus::NOT_STARTED, $service->statusFor($otherAdminProfile));
+        $this->assertFalse($service->professionalCanAcceptJobs($otherAdminProfile));
+
+        // 4. Profesional normal sin KYC -> Bloqueado
+        $normalProUser = User::factory()->create([
+            'email' => 'normal-pro@chambapp.com.mx',
+            'role' => UserRole::PROFESSIONAL,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $normalProProfile = ProfessionalProfile::factory()->create(['user_id' => $normalProUser->id]);
+
+        $this->assertFalse($normalProUser->isCreator());
+        $this->assertFalse($service->hasCreatorExemption($normalProProfile));
+        $this->assertFalse($normalProProfile->hasVerifiedIdentity());
+        $this->assertFalse($service->professionalCanAcceptJobs($normalProProfile));
+
+        // 5. Creador suspendido o baneado -> Bloqueado a pesar de la excepción
+        $creator1->update(['status' => UserStatus::SUSPENDED]);
+        $creator1->refresh();
+        $profile1->unsetRelation('user');
+
+        $this->assertFalse($creator1->isActive());
+        $this->assertFalse($service->professionalCanAcceptJobs($profile1));
+        $this->assertFalse($service->professionalCanAcceptJobs($creator1));
+
+        $creator2->update(['status' => UserStatus::BLOCKED]);
+        $creator2->refresh();
+        $profile2->unsetRelation('user');
+
+        $this->assertFalse($creator2->isActive());
+        $this->assertFalse($service->professionalCanAcceptJobs($profile2));
+        $this->assertFalse($service->professionalCanAcceptJobs($creator2));
+    }
+
+    public function test_operational_query_includes_creator_without_didit_record(): void
+    {
+        config()->set('chambapp.identity_verification.required', true);
+        config()->set('chambapp.creator_emails', ['gerawx@gmail.com', 'romy00120@gmail.com']);
+
+        $creator = User::factory()->create([
+            'email' => 'gerawx@gmail.com',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $creatorProfile = ProfessionalProfile::factory()->create(['user_id' => $creator->id]);
+
+        $otherAdmin = User::factory()->create([
+            'email' => 'unauthorized-admin@example.test',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $otherAdminProfile = ProfessionalProfile::factory()->create(['user_id' => $otherAdmin->id]);
+
+        $eligible = app(ProfessionalIdentityVerificationService::class)
+            ->applyOperationalEligibility(ProfessionalProfile::query())
+            ->pluck('id');
+
+        $this->assertTrue($eligible->contains($creatorProfile->id));
+        $this->assertFalse($eligible->contains($otherAdminProfile->id));
     }
 }

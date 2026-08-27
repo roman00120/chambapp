@@ -52,6 +52,21 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->role === UserRole::ADMIN;
     }
 
+    public function isCreator(): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        $creatorEmails = config('chambapp.creator_emails', ['gerawx@gmail.com', 'romy00120@gmail.com']);
+        if (! is_array($creatorEmails)) {
+            $creatorEmails = array_filter(array_map('trim', explode(',', (string) $creatorEmails)));
+        }
+        $creatorEmails = array_map('strtolower', (array) $creatorEmails);
+
+        return in_array(strtolower((string) $this->email), $creatorEmails, true);
+    }
+
     public function canActAsClient(): bool
     {
         return $this->isActive();

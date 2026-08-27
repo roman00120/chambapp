@@ -34,6 +34,7 @@ return [
         'polling_interval_seconds' => 4,
         'service_radius_options_km' => [5, 10, 15, 25],
     ],
+    'creator_emails' => array_values(array_filter(array_map('trim', explode(',', (string) env('CHAMBAPP_CREATOR_EMAILS', 'gerawx@gmail.com,romy00120@gmail.com'))))),
     'identity_verification' => [
         // Keep false until a KYC provider is selected, integrated and tested.
         'required' => filter_var(env('PROFESSIONAL_IDENTITY_VERIFICATION_REQUIRED', false), FILTER_VALIDATE_BOOL),
