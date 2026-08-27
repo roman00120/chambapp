@@ -660,6 +660,7 @@ body { background: radial-gradient(circle at 92% 0%, rgba(255, 213, 141, .24), t
 .brand-mark__image {
     width: 100%;
     height: 100%;
+    padding: .18rem;
     object-fit: contain;
     object-position: center;
     transform: none;
