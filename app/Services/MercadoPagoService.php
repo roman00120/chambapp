@@ -24,7 +24,7 @@ class MercadoPagoService
             'client_id' => config('services.mercadopago.client_id'),
             'response_type' => 'code',
             'platform_id' => 'mp',
-            'scope' => 'offline_access payments write',
+            'scope' => 'offline_access read write',
             'redirect_uri' => route('professional.payments.oauth-callback'),
             'state' => $state,
         ]);

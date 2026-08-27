@@ -81,6 +81,27 @@ class MercadoPagoServiceResilienceTest extends TestCase
         }
     }
 
+    public function test_authorization_url_contains_valid_scopes_and_redirect_uri(): void
+    {
+        config([
+            'services.mercadopago.client_id' => 'test-client-id-12345',
+            'services.mercadopago.auth_url' => 'https://auth.mercadopago.com.mx/authorization',
+        ]);
+
+        $service = new MercadoPagoService;
+        $url = $service->authorizationUrl('test-state-abc');
+
+        $this->assertStringStartsWith('https://auth.mercadopago.com.mx/authorization?', $url);
+        parse_str(parse_url($url, PHP_URL_QUERY), $params);
+
+        $this->assertSame('test-client-id-12345', $params['client_id']);
+        $this->assertSame('code', $params['response_type']);
+        $this->assertSame('mp', $params['platform_id']);
+        $this->assertSame('offline_access read write', $params['scope']);
+        $this->assertSame(route('professional.payments.oauth-callback'), $params['redirect_uri']);
+        $this->assertSame('test-state-abc', $params['state']);
+    }
+
     public static function transientStatusProvider(): array
     {
         return [[500], [502], [503], [504]];
