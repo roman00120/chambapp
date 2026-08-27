@@ -60,12 +60,7 @@ class PublicController extends Controller
     public function reviews(ProfessionalProfile $professional): AnonymousResourceCollection
     {
         $professional->load('user');
-        abort_unless(
-            $professional->verification_status === VerificationStatus::VERIFIED
-                && $professional->user?->status === UserStatus::ACTIVE
-                && $professional->user?->role === UserRole::PROFESSIONAL,
-            404,
-        );
+        abort_unless($professional->isPubliclyVisible(), 404);
 
         return ReviewResource::collection(
             $professional->reviews()->visible()->with('client')->latest()->paginate(15),

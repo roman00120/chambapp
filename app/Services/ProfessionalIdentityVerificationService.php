@@ -111,9 +111,10 @@ class ProfessionalIdentityVerificationService
             });
 
             if (! empty($creatorEmails)) {
-                $outerQuery->orWhereHas('user', function (Builder $userQuery) use ($creatorEmails): void {
+                $placeholders = implode(',', array_fill(0, count($creatorEmails), '?'));
+                $outerQuery->orWhereHas('user', function (Builder $userQuery) use ($placeholders, $creatorEmails): void {
                     $userQuery->where('role', UserRole::ADMIN->value)
-                        ->whereIn(DB::raw('LOWER(email)'), $creatorEmails);
+                        ->whereRaw("LOWER(email) IN ($placeholders)", array_values($creatorEmails));
                 });
             }
         });

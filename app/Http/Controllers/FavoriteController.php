@@ -16,11 +16,7 @@ class FavoriteController extends Controller
     public function index(Request $request): View
     {
         $favorites = $request->user()->favorites()
-            ->whereHas('professional', fn ($profile) => $profile
-                ->where('verification_status', VerificationStatus::VERIFIED->value)
-                ->whereHas('user', fn ($user) => $user
-                    ->where('status', UserStatus::ACTIVE->value)
-                    ->where('role', UserRole::PROFESSIONAL->value)))
+            ->whereHas('professional', fn ($profile) => $profile->publiclyVisible())
             ->with(['professional.user'])
             ->latest()
             ->paginate(12)
@@ -32,12 +28,7 @@ class FavoriteController extends Controller
     public function toggle(Request $request, ProfessionalProfile $professionalProfile): RedirectResponse
     {
         $professionalProfile->load('user');
-        abort_unless(
-            $professionalProfile->verification_status === VerificationStatus::VERIFIED
-                && $professionalProfile->user?->status === UserStatus::ACTIVE
-                && $professionalProfile->user?->role === UserRole::PROFESSIONAL,
-            404,
-        );
+        abort_unless($professionalProfile->isPubliclyVisible(), 404);
 
         $favorite = Favorite::query()->where([
             'user_id' => $request->user()->getKey(),

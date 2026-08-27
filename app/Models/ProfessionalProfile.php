@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use Database\Factories\ProfessionalProfileFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -166,11 +167,35 @@ class ProfessionalProfile extends Model
 
     public function isPubliclyVisible(): bool
     {
-        // verification_status is cast to VerificationStatus enum, so direct comparison is safe.
-        // User must be active and capable of acting as a professional (multimode-aware).
-        return $this->verification_status === VerificationStatus::VERIFIED
+        $isVerified = $this->verification_status === VerificationStatus::VERIFIED
+            || app(\App\Services\ProfessionalIdentityVerificationService::class)->hasCreatorExemption($this);
+
+        return $isVerified
             && $this->user?->status === UserStatus::ACTIVE
             && $this->user->canActAsProfessional();
+    }
+
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        $creatorEmails = config('chambapp.creator_emails', ['gerawx@gmail.com', 'romy00120@gmail.com']);
+        if (! is_array($creatorEmails)) {
+            $creatorEmails = array_filter(array_map('trim', explode(',', (string) $creatorEmails)));
+        }
+        $creatorEmails = array_values(array_map('strtolower', (array) $creatorEmails));
+
+        return $query->where(function (Builder $q) use ($creatorEmails): void {
+            $q->where('verification_status', VerificationStatus::VERIFIED->value);
+            if (! empty($creatorEmails)) {
+                $placeholders = implode(',', array_fill(0, count($creatorEmails), '?'));
+                $q->orWhereHas('user', function (Builder $u) use ($placeholders, $creatorEmails): void {
+                    $u->where('role', UserRole::ADMIN->value)
+                        ->whereRaw("LOWER(email) IN ($placeholders)", $creatorEmails);
+                });
+            }
+        })
+        ->whereHas('user', fn (Builder $u) => $u
+            ->where('status', UserStatus::ACTIVE->value)
+            ->whereIn('role', [UserRole::PROFESSIONAL->value, UserRole::ADMIN->value]));
     }
 
     public function verificationLabel(): string

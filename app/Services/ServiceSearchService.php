@@ -20,17 +20,14 @@ class ServiceSearchService
             ->active()
             ->whereHas('category', fn (Builder $category) => $category->where('is_active', true))
             ->whereHas('professional', function (Builder $profile): void {
-                $profile->where('verification_status', VerificationStatus::VERIFIED->value);
+                $profile->publiclyVisible();
                 $this->identityVerification->applyOperationalEligibility($profile);
             })
-            ->whereHas('professional.user', fn (Builder $user) => $user
-                ->where('status', UserStatus::ACTIVE->value)
-                ->where('role', UserRole::PROFESSIONAL->value))
             ->with([
                 'category:id,name,slug,icon',
                 'professional:id,user_id,bio,city,state,verification_status,profile_photo,average_rating,total_reviews,total_completed_jobs',
                 'professional.identityVerification:id,professional_id,status,expires_at',
-                'professional.user:id,name,status,role',
+                'professional.user:id,name,email,status,role',
                 'coverImage:id,service_id,path,alt_text,sort_order,is_cover',
             ]);
 

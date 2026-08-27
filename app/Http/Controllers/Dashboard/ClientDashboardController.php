@@ -20,10 +20,10 @@ class ClientDashboardController extends Controller
             ->with(['category', 'professional.user', 'coverImage'])
             ->where('is_active', true)
             ->whereHas('category', fn ($query) => $query->where('is_active', true))
-            ->whereHas('professional', fn ($query) => $query->where('verification_status', VerificationStatus::VERIFIED))
-            ->whereHas('professional.user', fn ($query) => $query
-                ->where('status', UserStatus::ACTIVE)
-                ->where('role', UserRole::PROFESSIONAL))
+            ->whereHas('professional', function ($profile): void {
+                $profile->publiclyVisible();
+                app(\App\Services\ProfessionalIdentityVerificationService::class)->applyOperationalEligibility($profile);
+            })
             ->latest()
             ->limit(3)
             ->get();

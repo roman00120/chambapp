@@ -17,12 +17,14 @@ class PublicServiceController extends Controller
             ->active()
             ->whereKey($service->getKey())
             ->whereHas('category', fn ($query) => $query->where('is_active', true))
-            ->whereHas('professional', fn ($profile) => $profile->where('verification_status', VerificationStatus::VERIFIED->value))
-            ->whereHas('professional.user', fn ($query) => $query->where('status', UserStatus::ACTIVE->value)->where('role', UserRole::PROFESSIONAL->value))
+            ->whereHas('professional', function ($profile) use ($identityVerification): void {
+                $profile->publiclyVisible();
+                $identityVerification->applyOperationalEligibility($profile);
+            })
             ->with([
                 'category:id,name,slug,description',
                 'professional:id,user_id,bio,city,state,verification_status,profile_photo,average_rating,total_reviews,total_completed_jobs',
-                'professional.user:id,name,status,role',
+                'professional.user:id,name,email,status,role',
                 'professional.identityVerification:id,professional_id,status,expires_at',
                 'images:id,service_id,path,alt_text,sort_order,is_cover',
             ])

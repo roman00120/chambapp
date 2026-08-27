@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\PriceType;
+use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Category;
@@ -161,5 +162,90 @@ class MarketplaceTest extends TestCase
         $this->post(route('professional.favorite.toggle', $profile))->assertRedirect(route('login'));
         $suspended = User::factory()->suspended()->create();
         $this->actingAs($suspended)->post(route('professional.favorite.toggle', $profile))->assertRedirect(route('login'));
+    }
+
+    public function test_creator_service_is_visible_in_catalog_to_other_clients(): void
+    {
+        config()->set('chambapp.identity_verification.required', true);
+        config()->set('chambapp.creator_emails', ['gerawx@gmail.com', 'romy00120@gmail.com']);
+
+        $category = Category::factory()->create(['name' => 'Informática']);
+
+        // 1. Creador con servicio activo (sin Didit pero con excepción)
+        $creator = User::factory()->create([
+            'email' => 'romy00120@gmail.com',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+            'name' => 'Romy Creador',
+        ]);
+        $creatorProfile = ProfessionalProfile::factory()->create([
+            'user_id' => $creator->id,
+            'verification_status' => VerificationStatus::UNVERIFIED,
+        ]);
+        $creatorService = Service::factory()->create([
+            'professional_id' => $creatorProfile->id,
+            'category_id' => $category->id,
+            'title' => 'Mantenimiento PC Creador',
+            'is_active' => true,
+        ]);
+
+        // 2. Profesional normal verificado con KYC
+        $verifiedPro = ProfessionalProfile::factory()->verifiedIdentity()->create();
+        $verifiedService = Service::factory()->create([
+            'professional_id' => $verifiedPro->id,
+            'category_id' => $category->id,
+            'title' => 'Servicio Pro Normal Verificado',
+            'is_active' => true,
+        ]);
+
+        // 3. Profesional normal sin KYC
+        $unverifiedPro = ProfessionalProfile::factory()->create();
+        $unverifiedService = Service::factory()->create([
+            'professional_id' => $unverifiedPro->id,
+            'category_id' => $category->id,
+            'title' => 'Servicio Pro Normal Sin KYC',
+            'is_active' => true,
+        ]);
+
+        // 4. Admin no creador sin KYC
+        $otherAdmin = User::factory()->create([
+            'email' => 'other-admin@test.com',
+            'role' => UserRole::ADMIN,
+            'status' => UserStatus::ACTIVE,
+        ]);
+        $otherAdminProfile = ProfessionalProfile::factory()->create(['user_id' => $otherAdmin->id]);
+        $otherAdminService = Service::factory()->create([
+            'professional_id' => $otherAdminProfile->id,
+            'category_id' => $category->id,
+            'title' => 'Servicio Admin Sin KYC',
+            'is_active' => true,
+        ]);
+
+        // 5. Cliente externo consulta el catálogo
+        $client = User::factory()->client()->create();
+
+        $response = $this->actingAs($client)->get(route('marketplace.search'));
+        $response->assertOk()
+            ->assertSee($creatorService->title)
+            ->assertSee($verifiedService->title)
+            ->assertDontSee($unverifiedService->title)
+            ->assertDontSee($otherAdminService->title);
+
+        // 6. El detalle público del servicio del creador es visible para el cliente
+        $this->actingAs($client)->get(route('marketplace.service', $creatorService))
+            ->assertOk()
+            ->assertSee($creatorService->title);
+
+        // 7. Si el creador es suspendido, su servicio deja de ser visible
+        $creator->update(['status' => UserStatus::SUSPENDED]);
+        $creator->refresh();
+        $creatorProfile->unsetRelation('user');
+
+        $this->actingAs($client)->get(route('marketplace.search'))
+            ->assertOk()
+            ->assertDontSee($creatorService->title);
+
+        $this->actingAs($client)->get(route('marketplace.service', $creatorService))
+            ->assertNotFound();
     }
 }

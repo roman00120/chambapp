@@ -18,21 +18,18 @@ class HomeController extends Controller
     {
         try {
             $verifiedProfessionals = ProfessionalProfile::query()
-                ->where('verification_status', VerificationStatus::VERIFIED)
-                ->whereHas('identityVerification', fn ($query) => $query
-                    ->where('status', \App\Enums\IdentityVerificationStatus::VERIFIED->value)
-                    ->where(fn ($expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', now())))
-                ->whereHas('user', fn ($query) => $query
-                    ->where('status', UserStatus::ACTIVE)
-                    ->where('role', UserRole::PROFESSIONAL));
+                ->publiclyVisible()
+                ->where(function ($query): void {
+                    app(\App\Services\ProfessionalIdentityVerificationService::class)->applyOperationalEligibility($query);
+                });
 
             $activeServices = Service::query()
                 ->where('is_active', true)
                 ->whereHas('category', fn ($query) => $query->where('is_active', true))
-                ->whereHas('professional', fn ($query) => $query->where('verification_status', VerificationStatus::VERIFIED))
-                ->whereHas('professional.user', fn ($query) => $query
-                    ->where('status', UserStatus::ACTIVE)
-                    ->where('role', UserRole::PROFESSIONAL));
+                ->whereHas('professional', function ($profile): void {
+                    $profile->publiclyVisible();
+                    app(\App\Services\ProfessionalIdentityVerificationService::class)->applyOperationalEligibility($profile);
+                });
 
             $visibleReviews = Review::query()->visible();
             $totalReviews = (clone $visibleReviews)->count();
