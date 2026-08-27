@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chambapp-static-v2';
+const CACHE_NAME = 'chambapp-static-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
     OFFLINE_URL,
