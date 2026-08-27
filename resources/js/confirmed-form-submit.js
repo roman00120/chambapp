@@ -11,11 +11,15 @@ export function submitConfirmedForm(form, submitter, documentRef = document) {
         form.appendChild(submitterValue);
     }
 
-    if (form.hasAttribute('data-disable-on-submit')) {
-        form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+    if (typeof form.hasAttribute === 'function' && form.hasAttribute('data-disable-on-submit')) {
+        form.querySelectorAll?.('button[type="submit"]')?.forEach?.((btn) => {
             btn.disabled = true;
         });
     }
 
-    HTMLFormElement.prototype.submit.call(form);
+    if (typeof form.submit === 'function') {
+        form.submit();
+    } else {
+        HTMLFormElement.prototype.submit.call(form);
+    }
 }
