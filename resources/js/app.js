@@ -152,12 +152,17 @@ document.querySelectorAll('[data-confirm-form]').forEach((form) => {
         pendingConfirmationSubmitter = event.submitter;
         const title = document.querySelector('#ui-confirm-title');
         if (title) {
-            title.textContent = '¿Confirmar acción?';
+            title.textContent = form.dataset.confirmTitle || '¿Confirmar acción?';
         }
         if (confirmMessage) {
             confirmMessage.textContent = form.dataset.confirmMessage || 'Confirma esta acción para continuar.';
         }
         confirmSubmit.textContent = form.dataset.confirmSubmit || 'Confirmar';
+        if (form.dataset.confirmSubmitVariant === 'danger') {
+            confirmSubmit.className = 'ui-button ui-button--danger';
+        } else {
+            confirmSubmit.className = 'ui-button ui-button--primary';
+        }
         bootstrap.Modal.getOrCreateInstance(confirmModal).show();
     });
 });
@@ -175,7 +180,7 @@ confirmSubmit?.addEventListener('click', () => {
     submitConfirmedForm(form, submitter);
 });
 
-document.querySelectorAll('[data-disable-on-submit]').forEach((form) => {
+document.querySelectorAll('[data-disable-on-submit]:not([data-confirm-form]):not([data-confirm-delete-form])').forEach((form) => {
     form.addEventListener('submit', () => {
         form.querySelectorAll('button[type="submit"]').forEach((button) => {
             button.disabled = true;

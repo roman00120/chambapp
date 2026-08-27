@@ -1,4 +1,8 @@
 export function submitConfirmedForm(form, submitter, documentRef = document) {
+    if (!form) {
+        return;
+    }
+
     if (submitter?.name) {
         const submitterValue = documentRef.createElement('input');
         submitterValue.type = 'hidden';
@@ -7,5 +11,11 @@ export function submitConfirmedForm(form, submitter, documentRef = document) {
         form.appendChild(submitterValue);
     }
 
-    form.submit();
+    if (form.hasAttribute('data-disable-on-submit')) {
+        form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+            btn.disabled = true;
+        });
+    }
+
+    HTMLFormElement.prototype.submit.call(form);
 }
