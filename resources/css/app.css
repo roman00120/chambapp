@@ -656,14 +656,13 @@ body { background: radial-gradient(circle at 92% 0%, rgba(255, 213, 141, .24), t
 }
 .reference-cta .ui-button { color: #3b2415; background: #fbbf24; border-color: #fbbf24; }
 
-/* Brand image: crop the supplied square artwork to keep the shovel mark readable. */
+/* Keep the complete source artwork visible at every responsive navbar size. */
 .brand-mark__image {
-    width: 142%;
-    max-width: none;
-    height: 142%;
-    object-fit: cover;
-    object-position: center 25%;
-    transform: translate(-14.8%, -8%);
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transform: none;
 }
 
 .identity-mobile-transfer {
