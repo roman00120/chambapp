@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', ($category ? $category->name : 'Buscar servicios').' | Chambapp')
-@section('meta_description', $category ? 'Explora servicios de '.$category->name.' en Chambapp.' : 'Busca servicios y profesionales verificados en Chambapp.')
+@section('title', (!empty($category) ? $category->name : 'Buscar servicios').' | Chambapp')
+@section('meta_description', !empty($category) ? 'Explora servicios de '.$category->name.' en Chambapp.' : 'Busca servicios y profesionales verificados en Chambapp.')
 
 @section('content')
     <section class="marketplace-page">
@@ -9,7 +9,7 @@
             <div class="marketplace-heading">
                 <div>
                     <p class="eyebrow mb-2"><i class="bi bi-compass" aria-hidden="true"></i> Marketplace Chambapp</p>
-                    <h1 class="page-title">{{ $category ? $category->name : 'Encuentra lo que necesitas.' }}</h1>
+                    <h1 class="page-title">{{ !empty($category) ? $category->name : 'Encuentra lo que necesitas.' }}</h1>
                     <p class="section-copy mb-0">Explora servicios de profesionales verificados y encuentra una opción para tu próximo proyecto.</p>
                 </div>
             </div>

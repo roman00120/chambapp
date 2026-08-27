@@ -33,7 +33,7 @@ class MarketplaceController extends Controller
     {
         return ProfessionalProfile::query()
             ->whereNotNull('city')
-            ->whereHas('user', fn ($query) => $query->where('status', 'active')->where('role', 'professional'))
+            ->publiclyVisible()
             ->orderBy('city')
             ->distinct()
             ->pluck('city')
