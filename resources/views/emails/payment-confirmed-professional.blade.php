@@ -1,33 +1,39 @@
 @extends('emails.layout')
 
-@section('title', 'El cliente realizó el pago')
+@section('title', 'El cliente realizó el pago — Chambapp')
+@section('hero_icon', '🚀')
 
 @section('content')
-    <h1>¡El cliente ha realizado el pago!</h1>
-    <p>El cliente <strong>{{ $job->client?->name ?? 'El cliente' }}</strong> ha pagado exitosamente la chamba. El monto está asegurado en custodia.</p>
-    
-    <div class="card">
-        <div class="card-row">
-            <span class="card-label">Chamba:</span>
-            <span class="card-value">{{ $job->service?->title ?? $job->title }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Cliente:</span>
-            <span class="card-value">{{ $job->client?->name ?? 'Cliente' }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Monto a recibir:</span>
-            <span class="card-value" style="color: #16a34a;">${{ number_format((float) ($payment->professional_net_amount ?? $payment->gross_amount), 2) }} {{ $payment->currency ?? 'MXN' }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Estado:</span>
-            <span class="card-value" style="color: #16a34a;">Pagado / Listo para iniciar</span>
-        </div>
-    </div>
+    <h1 class="email-title">¡Pago en custodia confirmado!</h1>
 
-    <p>Ya puedes ponerte en camino y prestar el servicio. Recuerda marcar tu llegada e inicio desde la aplicación para mantener al cliente informado.</p>
+    <p class="email-lead">
+        Hola <strong>{{ $job->professional?->user?->name ?? 'Profesional' }}</strong>,<br />
+        El cliente <strong>{{ $job->client?->name ?? 'El cliente' }}</strong> ha completado el pago. El dinero se encuentra resguardado en custodia y ya puedes iniciar la chamba.
+    </p>
 
-    <div class="button-wrapper">
-        <a href="{{ route('job-requests.show', $job) }}" class="button">Iniciar y gestionar chamba</a>
+    <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td colspan="2" class="info-card-header">Detalles de la Chamba</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">TRABAJO</td>
+            <td class="info-value">{{ $job->service?->title ?? $job->title }}</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">CLIENTE</td>
+            <td class="info-value">{{ $job->client?->name ?? 'Cliente' }}</td>
+        </tr>
+        <tr class="info-row" style="background-color: #f0fdf4;">
+            <td class="info-label" style="font-weight: 700; color: #166534;">TU PAGO ASEGURADO</td>
+            <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) ($payment->professional_amount ?? $payment->gross_amount), 2) }} MXN</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">ESTADO</td>
+            <td class="info-value" style="color: #16a34a;">Listo para iniciar ✓</td>
+        </tr>
+    </table>
+
+    <div class="btn-container">
+        <a href="{{ route('job-requests.show', $job) }}" class="btn-main" target="_blank">Iniciar y gestionar chamba &rarr;</a>
     </div>
 @endsection

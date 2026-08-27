@@ -1,33 +1,45 @@
 @extends('emails.layout')
 
-@section('title', 'Promoción activada')
+@section('title', '¡Promoción activada! — Chambapp')
+@section('hero_icon', '🌟')
 
 @section('content')
-    <h1>¡Tu servicio ha sido destacado con éxito!</h1>
-    <p>Hemos confirmado tu pago de promoción. Tu servicio ahora cuenta con mayor visibilidad en los primeros lugares del catálogo de Chambapp.</p>
-    
-    <div class="card">
-        <div class="card-row">
-            <span class="card-label">Servicio promocionado:</span>
-            <span class="card-value">{{ $service->title }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Duración:</span>
-            <span class="card-value">{{ $days }} {{ $days === 1 ? 'día (24 horas)' : 'días' }}</span>
-        </div>
-        @if($service->featured_until)
-        <div class="card-row">
-            <span class="card-label">Válido hasta:</span>
-            <span class="card-value">{{ $service->featured_until->format('d/m/Y H:i') }}</span>
-        </div>
-        @endif
-        <div class="card-row">
-            <span class="card-label">Estado:</span>
-            <span class="card-value" style="color: #16a34a;">Activo y destacado</span>
-        </div>
-    </div>
+    <h1 class="email-title">¡Tu servicio ahora está destacado!</h1>
 
-    <div class="button-wrapper">
-        <a href="{{ route('marketplace.service', $service) }}" class="button">Ver servicio en catálogo</a>
+    <p class="email-lead">
+        Hola <strong>{{ $service->professional?->user?->name ?? 'Profesional' }}</strong>,<br />
+        Tu promoción ha sido activada. Tu servicio cuenta con máxima visibilidad prioritaria en el catálogo para atraer más clientes.
+    </p>
+
+    <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td colspan="2" class="info-card-header">Detalles de la Promoción</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">SERVICIO</td>
+            <td class="info-value info-highlight">{{ $service->title }}</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">CATEGORÍA</td>
+            <td class="info-value">{{ $service->category?->name ?? 'Servicios' }}</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">DURACIÓN</td>
+            <td class="info-value">{{ $days }} días de visibilidad</td>
+        </tr>
+        @if ($service->featured_until)
+            <tr class="info-row">
+                <td class="info-label">VIGENTE HASTA</td>
+                <td class="info-value">{{ $service->featured_until->format('d/m/Y') }}</td>
+            </tr>
+        @endif
+        <tr class="info-row">
+            <td class="info-label">ESTADO</td>
+            <td class="info-value" style="color: #16a34a;">Activo y destacado ✓</td>
+        </tr>
+    </table>
+
+    <div class="btn-container">
+        <a href="{{ route('marketplace.service', $service) }}" class="btn-main" target="_blank">Ver mi servicio en catálogo &rarr;</a>
     </div>
 @endsection

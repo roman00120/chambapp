@@ -24,7 +24,7 @@ class JobCompletedNotification extends Notification implements ShouldQueue
         $jobTitle = $this->job->service?->title ?? $this->job->title;
 
         return (new MailMessage)
-            ->subject("Chamba completada — Califica a tu profesional ({$jobTitle})")
+            ->subject('Chamba completada — ¡califica tu experiencia!')
             ->view('emails.job-completed', ['job' => $this->job]);
     }
 

@@ -28,7 +28,7 @@ class PaymentConfirmedClientNotification extends Notification implements ShouldQ
         $jobTitle = $this->job->service?->title ?? $this->job->title;
 
         return (new MailMessage)
-            ->subject("Pago confirmado — {$jobTitle}")
+            ->subject('Pago confirmado')
             ->view('emails.payment-confirmed-client', [
                 'job' => $this->job,
                 'payment' => $this->payment,

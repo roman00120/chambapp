@@ -1,24 +1,80 @@
 @extends('emails.layout')
 
-@section('title', 'Bienvenido a Chambapp')
+@section('title', '¡Bienvenido a Chambapp!')
+@section('hero_icon', '🎉')
 
 @section('content')
-    <h1>¡Hola, {{ $user->name }}!</h1>
-    <p>Te damos la bienvenida a <strong>Chambapp</strong>, la plataforma donde conectamos a clientes que necesitan resolver una tarea con los mejores profesionales independientes.</p>
-    
-    <div class="card">
-        <p style="margin: 0; color: #334155;">
-            @if($user->isProfessional())
-                Tu perfil profesional está listo. Configura tus servicios, establece tus horarios y comienza a recibir solicitudes de clientes cerca de ti.
-            @else
-                Tu cuenta de cliente está lista. Explora nuestro catálogo de servicios calificados o solicita una chamba en minutos con la seguridad de pagos en custodia.
-            @endif
+    <h1 class="email-title">¡Bienvenido a Chambapp,<br /><span class="title-accent">{{ $user->name }}</span>! 👋</h1>
+
+    @if ($user->isProfessional())
+        <p class="email-lead">
+            Tu cuenta profesional ya está lista.<br />
+            Ahora puedes comenzar a ofrecer tus servicios, recibir solicitudes de clientes y enviar cotizaciones de manera sencilla y segura.
         </p>
-    </div>
 
-    <div class="button-wrapper">
-        <a href="{{ route('login') }}" class="button">Entrar a Chambapp</a>
-    </div>
+        <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td colspan="2" class="info-card-header">¿Qué puedes hacer en Chambapp?</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">👤</span></td>
+                <td>Recibir solicitudes directas de clientes</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">📄</span></td>
+                <td>Enviar cotizaciones transparentes</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">💼</span></td>
+                <td>Gestionar el avance de tus chambas</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">💳</span></td>
+                <td>Recibir tus pagos protegidos en custodia</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">📈</span></td>
+                <td>Hacer crecer tu reputación y tu negocio</td>
+            </tr>
+        </table>
 
-    <p style="font-size: 13px; color: #64748b; text-align: center;">Si tienes dudas o necesitas ayuda, estamos para servirte.</p>
+        <div class="btn-container">
+            <a href="{{ route('professional.dashboard') }}" class="btn-main" target="_blank">Entrar a mi panel profesional &rarr;</a>
+        </div>
+    @else
+        <p class="email-lead">
+            Tu cuenta en Chambapp ya está lista.<br />
+            Encuentra y contrata a los mejores profesionales independientes con la máxima seguridad y garantía en cada chamba.
+        </p>
+
+        <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td colspan="2" class="info-card-header">¿Qué puedes hacer en Chambapp?</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">🔍</span></td>
+                <td>Explorar cientos de servicios verificados</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">📋</span></td>
+                <td>Solicitar cotizaciones sin compromiso</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">🛡️</span></td>
+                <td>Pagar de forma 100% protegida en custodia</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">📍</span></td>
+                <td>Seguir el estado de tu servicio en tiempo real</td>
+            </tr>
+            <tr class="feature-item">
+                <td class="feature-icon-cell"><span class="feature-icon">⭐</span></td>
+                <td>Calificar la calidad de la atención recibida</td>
+            </tr>
+        </table>
+
+        <div class="btn-container">
+            <a href="{{ route('client.dashboard') }}" class="btn-main" target="_blank">Explorar servicios &rarr;</a>
+        </div>
+    @endif
 @endsection

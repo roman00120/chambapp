@@ -25,7 +25,7 @@ class PromotionActivatedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Promoción activada para tu servicio: {$this->service->title}")
+            ->subject('¡Tu promoción está activa!')
             ->view('emails.promotion-activated', [
                 'service' => $this->service,
                 'days' => $this->days,

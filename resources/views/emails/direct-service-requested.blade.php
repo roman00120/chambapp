@@ -1,45 +1,55 @@
 @extends('emails.layout')
 
-@section('title', 'Nueva solicitud de servicio')
+@section('title', 'Nueva solicitud de servicio en Chambapp')
+@section('hero_icon', '🔔')
 
 @section('content')
-    <h1>¡Tienes una nueva solicitud de servicio!</h1>
-    <p>Un cliente ha solicitado directamente uno de tus servicios publicados en el catálogo de Chambapp.</p>
-    
-    <div class="card">
-        <div class="card-row">
-            <span class="card-label">Servicio:</span>
-            <span class="card-value">{{ $job->service?->title ?? $job->title }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Cliente:</span>
-            <span class="card-value">{{ $job->client?->name ?? 'Cliente' }}</span>
-        </div>
-        @if($job->scheduled_for)
-        <div class="card-row">
-            <span class="card-label">Fecha programada:</span>
-            <span class="card-value">{{ $job->scheduled_for->format('d/m/Y') }}</span>
-        </div>
-        @endif
-        @if($job->scheduled_slot)
-        <div class="card-row">
-            <span class="card-label">Horario:</span>
-            <span class="card-value">{{ $job->scheduled_slot }}</span>
-        </div>
-        @endif
-        @if($job->city)
-        <div class="card-row">
-            <span class="card-label">Ubicación:</span>
-            <span class="card-value">{{ $job->city }}{{ $job->state ? ', '.$job->state : '' }}</span>
-        </div>
-        @endif
-    </div>
+    <h1 class="email-title">¡Nueva solicitud de servicio!</h1>
 
-    @if($job->description)
-    <p><strong>Detalle de la solicitud:</strong><br>{{ $job->description }}</p>
+    <p class="email-lead">
+        Hola <strong>{{ $job->professional?->user?->name ?? 'Profesional' }}</strong>,<br />
+        Un cliente ha seleccionado tu servicio en el catálogo de Chambapp y te ha enviado una solicitud directa para cotizar.
+    </p>
+
+    <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td colspan="2" class="info-card-header">Detalles de la Solicitud</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">SERVICIO</td>
+            <td class="info-value info-highlight">{{ $job->service?->title ?? $job->title }}</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">CLIENTE</td>
+            <td class="info-value">{{ $job->client?->name ?? 'Cliente Chambapp' }}</td>
+        </tr>
+        @if ($job->scheduled_for)
+            <tr class="info-row">
+                <td class="info-label">FECHA DESEADA</td>
+                <td class="info-value">{{ $job->scheduled_for->format('d/m/Y') }}</td>
+            </tr>
+        @endif
+        @if ($job->scheduled_slot)
+            <tr class="info-row">
+                <td class="info-label">HORARIO</td>
+                <td class="info-value">{{ $job->scheduled_slot }}</td>
+            </tr>
+        @endif
+        @if ($job->city)
+            <tr class="info-row">
+                <td class="info-label">ZONA / CIUDAD</td>
+                <td class="info-value">{{ $job->city }}</td>
+            </tr>
+        @endif
+    </table>
+
+    @if ($job->description)
+        <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin: 20px 0; text-align: left; font-size: 14px; color: #334155; font-style: italic;">
+            "{{ $job->description }}"
+        </div>
     @endif
 
-    <div class="button-wrapper">
-        <a href="{{ route('job-requests.show', $job) }}" class="button">Ver solicitud y cotizar</a>
+    <div class="btn-container">
+        <a href="{{ route('job-requests.show', $job) }}" class="btn-main" target="_blank">Ver solicitud y cotizar &rarr;</a>
     </div>
 @endsection

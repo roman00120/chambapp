@@ -28,7 +28,7 @@ class JobCancelledNotification extends Notification implements ShouldQueue
         $jobTitle = $this->job->service?->title ?? $this->job->title;
 
         return (new MailMessage)
-            ->subject("Cancelación de chamba — {$jobTitle}")
+            ->subject('Cancelación de chamba')
             ->view('emails.job-cancelled', [
                 'job' => $this->job,
                 'reason' => $this->reason,

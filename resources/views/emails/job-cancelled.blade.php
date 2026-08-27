@@ -1,31 +1,40 @@
 @extends('emails.layout')
 
-@section('title', 'Chamba cancelada')
+@section('title', 'Aviso de cancelación — Chambapp')
+@section('hero_icon', '❌')
 
 @section('content')
-    <h1>Aviso de cancelación de chamba</h1>
-    <p>Te informamos que la siguiente solicitud de trabajo ha sido cancelada.</p>
-    
-    <div class="card">
-        <div class="card-row">
-            <span class="card-label">Chamba:</span>
-            <span class="card-value">{{ $job->service?->title ?? $job->title }}</span>
-        </div>
-        @if($reason)
-        <div class="card-row">
-            <span class="card-label">Motivo:</span>
-            <span class="card-value">{{ $reason }}</span>
-        </div>
-        @endif
-        <div class="card-row">
-            <span class="card-label">Estado:</span>
-            <span class="card-value" style="color: #dc2626;">Cancelado</span>
-        </div>
-    </div>
+    <h1 class="email-title">Aviso de cancelación</h1>
 
-    @if($actionUrl)
-    <div class="button-wrapper">
-        <a href="{{ $actionUrl }}" class="button">Ver detalles</a>
+    <p class="email-lead">
+        Te informamos que la siguiente solicitud de servicio ha sido cancelada en la plataforma.
+    </p>
+
+    <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td colspan="2" class="info-card-header">Detalles de la Cancelación</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">TRABAJO</td>
+            <td class="info-value">{{ $job->service?->title ?? $job->title }}</td>
+        </tr>
+        @if ($reason)
+            <tr class="info-row">
+                <td class="info-label">MOTIVO</td>
+                <td class="info-value">{{ $reason }}</td>
+            </tr>
+        @endif
+        <tr class="info-row">
+            <td class="info-label">ESTADO</td>
+            <td class="info-value" style="color: #ef4444;">Cancelado</td>
+        </tr>
+    </table>
+
+    <p class="email-lead" style="font-size: 14px; margin-bottom: 16px;">
+        Si se realizó algún cobro previo en custodia, el proceso de reembolso se gestionará de acuerdo con los términos y condiciones de la plataforma.
+    </p>
+
+    <div class="btn-container">
+        <a href="{{ $actionUrl }}" class="btn-main" target="_blank">Revisar en Chambapp &rarr;</a>
     </div>
-    @endif
 @endsection

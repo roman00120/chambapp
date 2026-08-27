@@ -24,7 +24,7 @@ class QuoteAcceptedNotification extends Notification implements ShouldQueue
         $jobTitle = $this->quote->jobRequest?->service?->title ?? $this->quote->jobRequest?->title;
 
         return (new MailMessage)
-            ->subject("¡Cotización aceptada en Chambapp! — {$jobTitle}")
+            ->subject('¡Cotización aceptada en Chambapp!')
             ->view('emails.quote-accepted', ['quote' => $this->quote]);
     }
 

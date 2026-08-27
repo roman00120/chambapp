@@ -1,39 +1,39 @@
 @extends('emails.layout')
 
-@section('title', 'Pago confirmado')
+@section('title', 'Pago confirmado — Chambapp')
+@section('hero_icon', '💳')
 
 @section('content')
-    <h1>¡Tu pago ha sido confirmado!</h1>
-    <p>Hemos recibido correctamente tu pago. Tu dinero está seguro en custodia de Chambapp y será liberado al profesional una vez que confirmes la finalización del trabajo.</p>
-    
-    <div class="card">
-        <div class="card-row">
-            <span class="card-label">Chamba:</span>
-            <span class="card-value">{{ $job->service?->title ?? $job->title }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Profesional:</span>
-            <span class="card-value">{{ $job->professional?->user?->name ?? 'Profesional' }}</span>
-        </div>
-        <div class="card-row">
-            <span class="card-label">Total pagado:</span>
-            <span class="card-value" style="color: #16a34a;">${{ number_format((float) ($payment->customer_total ?? $payment->gross_amount), 2) }} {{ $payment->currency ?? 'MXN' }}</span>
-        </div>
-        @if($payment->external_payment_id)
-        <div class="card-row">
-            <span class="card-label">Referencia de pago:</span>
-            <span class="card-value">{{ $payment->external_payment_id }}</span>
-        </div>
-        @endif
-        <div class="card-row">
-            <span class="card-label">Fecha:</span>
-            <span class="card-value">{{ now()->format('d/m/Y H:i') }}</span>
-        </div>
-    </div>
+    <h1 class="email-title">¡Pago confirmado exitosamente!</h1>
 
-    <p>El profesional ha sido notificado para que comience a coordinar la prestación del servicio.</p>
+    <p class="email-lead">
+        Hola <strong>{{ $job->client?->name ?? 'Cliente' }}</strong>,<br />
+        Tu pago ha sido procesado de forma segura. Los fondos se mantienen protegidos en custodia por Chambapp hasta que el servicio sea completado a tu entera satisfacción.
+    </p>
 
-    <div class="button-wrapper">
-        <a href="{{ route('job-requests.show', $job) }}" class="button">Ver detalles de la chamba</a>
+    <table class="info-card" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td colspan="2" class="info-card-header">Comprobante de Pago en Custodia</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">TRABAJO</td>
+            <td class="info-value">{{ $job->service?->title ?? $job->title }}</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">PROFESIONAL</td>
+            <td class="info-value">{{ $job->professional?->user?->name ?? 'Profesional asignado' }}</td>
+        </tr>
+        <tr class="info-row" style="background-color: #f0fdf4;">
+            <td class="info-label" style="font-weight: 700; color: #166534;">MONTO TOTAL</td>
+            <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) ($payment->customer_total ?? $payment->gross_amount), 2) }} MXN</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-label">ESTADO</td>
+            <td class="info-value" style="color: #16a34a;">Pago protegido en custodia ✓</td>
+        </tr>
+    </table>
+
+    <div class="btn-container">
+        <a href="{{ route('job-requests.show', $job) }}" class="btn-main" target="_blank">Ver detalle del pago &rarr;</a>
     </div>
 @endsection

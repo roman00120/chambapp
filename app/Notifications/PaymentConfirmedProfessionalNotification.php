@@ -28,7 +28,7 @@ class PaymentConfirmedProfessionalNotification extends Notification implements S
         $jobTitle = $this->job->service?->title ?? $this->job->title;
 
         return (new MailMessage)
-            ->subject("El cliente realizó el pago — {$jobTitle}")
+            ->subject('El cliente realizó el pago')
             ->view('emails.payment-confirmed-professional', [
                 'job' => $this->job,
                 'payment' => $this->payment,

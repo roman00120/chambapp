@@ -5,6 +5,7 @@
 .env.*
 *.env.backup*
 .env.backup.*
+SMTP_PASSWORD_TEMP.txt
 !.env.example
 .phpactor.json
 .phpunit.result.cache

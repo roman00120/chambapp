@@ -125,7 +125,7 @@ class EmailNotificationSystemTest extends TestCase
 
         Notification::assertSentTo($client, QuoteReceivedNotification::class, function ($notification) use ($client) {
             $mail = $notification->toMail($client);
-            $this->assertStringContainsString('Nueva cotización para tu solicitud', $mail->subject);
+            $this->assertStringContainsString('Nueva cotización en Chambapp', $mail->subject);
             return true;
         });
     }
@@ -362,7 +362,7 @@ class EmailNotificationSystemTest extends TestCase
 
         Notification::assertSentTo($proUser, PromotionActivatedNotification::class, function ($notification) use ($proUser) {
             $mail = $notification->toMail($proUser);
-            $this->assertStringContainsString('Promoción activada para tu servicio', $mail->subject);
+            $this->assertStringContainsString('¡Tu promoción está activa!', $mail->subject);
             return true;
         });
     }

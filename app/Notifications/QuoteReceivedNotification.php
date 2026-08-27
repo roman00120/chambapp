@@ -28,7 +28,7 @@ class QuoteReceivedNotification extends Notification implements ShouldQueue
         $jobTitle = $this->quote->jobRequest?->service?->title ?? $this->quote->jobRequest?->title;
 
         return (new MailMessage)
-            ->subject("Nueva cotización para tu solicitud: {$jobTitle}")
+            ->subject('Nueva cotización en Chambapp')
             ->view('emails.quote-received', [
                 'quote' => $this->quote,
                 'breakdown' => $this->breakdown,

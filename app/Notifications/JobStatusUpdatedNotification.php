@@ -31,7 +31,7 @@ class JobStatusUpdatedNotification extends Notification implements ShouldQueue
         $jobTitle = $this->job->service?->title ?? $this->job->title;
 
         return (new MailMessage)
-            ->subject("{$this->heading} — {$jobTitle}")
+            ->subject('Actualización de tu chamba')
             ->view('emails.job-status-updated', [
                 'job' => $this->job,
                 'heading' => $this->heading,
