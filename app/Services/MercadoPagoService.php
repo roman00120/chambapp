@@ -115,7 +115,7 @@ class MercadoPagoService
             'expires' => true,
             'expiration_date_from' => $expiration['from'],
             'expiration_date_to' => $expiration['to'],
-        ]);
+        ], 'platform_preference');
 
         $data = $this->responseData($response);
         if (! $response->successful() || ! filled(data_get($data, 'id')) || ! filled(data_get($data, 'init_point'))) {

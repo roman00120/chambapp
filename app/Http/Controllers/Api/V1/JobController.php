@@ -69,7 +69,7 @@ class JobController extends Controller
         $job = $jobs->createScheduled($request->user(), $request->validated());
 
         return response()->json([
-            'data' => new JobRequestResource($job->load(['category', 'service'])),
+            'data' => new JobRequestResource($job->load(['category', 'service.category', 'service.professional.user', 'service.coverImage', 'professional.user'])),
             'message' => 'Solicitud programada correctamente.',
         ], 201);
     }

@@ -54,8 +54,9 @@ class JobRequestService
             throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
         }
 
-        return JobRequest::query()->create([
+        $job = JobRequest::query()->create([
             'client_id' => $client->getKey(),
+            'professional_id' => $service?->professional_id,
             'service_id' => $service?->getKey(),
             'category_id' => $data['category_id'],
             'service_mode' => ServiceMode::from($data['service_mode'] ?? 'scheduled'),
@@ -72,12 +73,23 @@ class JobRequestService
             'scheduled_slot' => $data['scheduled_slot'],
             'status' => JobStatus::PENDING,
         ]);
+
+        if ($service?->professional?->user) {
+            $service->professional->user->notify(new \App\Notifications\ChambappNotification(
+                'job_requested',
+                'Nueva solicitud de servicio',
+                $job->title,
+                route('job-requests.show', $job),
+            ));
+        }
+
+        return $job;
     }
 
     private function safeService(?int $serviceId, int $categoryId): ?Service
     {
         return $serviceId
-            ? Service::query()->active()->where('category_id', $categoryId)->find($serviceId)
+            ? Service::query()->active()->where('category_id', $categoryId)->with(['professional.user'])->find($serviceId)
             : null;
     }
 }

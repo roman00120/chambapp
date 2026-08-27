@@ -572,6 +572,84 @@ class JobApiTest extends TestCase
         $this->assertSame(5, $professional->fresh()->total_reviews > 0 ? (int) $professional->fresh()->average_rating : 0);
     }
 
+    public function test_complete_e2e_direct_service_hiring_and_quote_acceptance_flow(): void
+    {
+        $client = User::factory()->client()->create(['name' => 'Kevin Cliente']);
+        $proUser = User::factory()->professional()->create(['name' => 'Romy Pro']);
+        $proProfile = ProfessionalProfile::factory()->for($proUser)->create([
+            'is_available' => true,
+            'availability_status' => AvailabilityStatus::AVAILABLE,
+            'mercadopago_user_id' => '79786415',
+        ]);
+        $category = Category::factory()->create(['name' => 'Informática (mantenimiento PC)', 'is_active' => true]);
+        $service = \App\Models\Service::factory()->create([
+            'professional_id' => $proProfile->id,
+            'category_id' => $category->id,
+            'title' => 'prueba prueba',
+            'price' => '200.00',
+            'is_active' => true,
+        ]);
+
+        // 1. Cliente envía solicitud directa para el servicio 'prueba prueba'
+        Sanctum::actingAs($client);
+        $payload = [
+            'category_id' => $category->id,
+            'service_id' => $service->id,
+            'title' => 'prueba prueba',
+            'description' => 'Requiero contratar su servicio de mantenimiento de PC.',
+            'scheduled_for' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'scheduled_slot' => '11:00-14:00',
+            'address' => 'Av. Vallarta 1234',
+            'city' => 'Guadalajara',
+            'state' => 'Jalisco',
+            'postal_code' => '44100',
+        ];
+
+        $response = $this->postJson('/api/v1/jobs/scheduled', $payload)->assertCreated();
+
+        // 2. Verificaciones del Job Request creado
+        $response->assertJsonPath('data.service.id', $service->id);
+        $response->assertJsonPath('data.service.title', 'prueba prueba');
+        $response->assertJsonPath('data.professional.id', $proProfile->id);
+        $response->assertJsonPath('data.status', 'pending');
+        $response->assertJsonPath('data.status_label', 'pending');
+
+        $jobId = $response->json('data.id');
+        $job = JobRequest::query()->find($jobId);
+        $this->assertNotNull($job);
+        $this->assertSame($service->id, $job->service_id);
+        $this->assertSame($proProfile->id, $job->professional_id);
+        $this->assertSame(JobStatus::PENDING, $job->status);
+        $this->assertDatabaseCount('job_invitations', 0); // Matching NO ejecutado
+
+        // 3. Profesional cotiza
+        Sanctum::actingAs($proUser);
+        $quoteResponse = $this->postJson("/api/v1/professional/jobs/{$job->id}/quotes", [
+            'amount' => '200.00',
+            'description' => 'Cotización por servicio prueba prueba.',
+        ])->assertCreated();
+
+        $quoteId = $quoteResponse->json('data.id');
+        $this->assertSame(JobStatus::ACCEPTED, $job->fresh()->status);
+
+        // 4. Cliente acepta la cotización -> pasa a awaiting_payment
+        Sanctum::actingAs($client);
+        $this->postJson("/api/v1/jobs/{$job->id}/quotes/{$quoteId}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'accepted');
+
+        $freshJob = $job->fresh();
+        $this->assertSame(JobStatus::AWAITING_PAYMENT, $freshJob->status);
+
+        // 5. Cálculo económico 15/15
+        $calc = app(\App\Services\PaymentCalculationService::class)->forJob($freshJob);
+        $this->assertSame('200.00', $calc->baseAmount);
+        $this->assertSame('30.00', $calc->clientServiceFee);
+        $this->assertSame('230.00', $calc->customerTotal);
+        $this->assertSame('60.00', $calc->platformGrossFee);
+        $this->assertSame('170.00', $calc->professionalAmountBeforeExternalCosts);
+    }
+
     private function availableProfessional(): ProfessionalProfile
     {
         return ProfessionalProfile::factory()->verifiedIdentity()->create([

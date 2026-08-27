@@ -14,6 +14,7 @@ use App\Services\PaymentStatusMapper;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Mockery;
 use Tests\TestCase;
@@ -218,6 +219,65 @@ class CommercePaymentHardeningTest extends TestCase
 
         $this->assertSame('pending', $order->fresh()->status);
         $this->assertFalse($service->fresh()->is_featured);
+    }
+
+    public function test_real_create_platform_preference_invokes_post_once_with_platform_preference(): void
+    {
+        config([
+            'services.mercadopago.access_token' => 'TEST-PLATFORM-TOKEN',
+            'services.mercadopago.user_id' => '123456789',
+        ]);
+
+        Http::fake([
+            'https://api.mercadopago.com/checkout/preferences' => Http::response([
+                'id' => 'pref-platform-test-123',
+                'init_point' => 'https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-platform-test-123',
+                'sandbox_init_point' => 'https://sandbox.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-platform-test-123',
+            ], 201),
+        ]);
+
+        $service = app(MercadoPagoService::class);
+        $result = $service->createPlatformPreference('featured-7', '199.00', 'CHAMBAPP-COM-1-ABC');
+
+        $this->assertSame('pref-platform-test-123', $result['id']);
+        $this->assertNotEmpty($result['url']);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request): bool {
+            return $request->url() === 'https://api.mercadopago.com/checkout/preferences'
+                && $request['external_reference'] === 'CHAMBAPP-COM-1-ABC'
+                && $request['items'][0]['unit_price'] === 199.0;
+        });
+    }
+
+    public function test_buy_featured_route_dispatches_platform_preference_and_redirects(): void
+    {
+        [$professional, $service] = $this->professionalAndService();
+
+        config([
+            'services.mercadopago.access_token' => 'TEST-PLATFORM-TOKEN',
+            'services.mercadopago.user_id' => '123456789',
+        ]);
+
+        Http::fake([
+            'https://api.mercadopago.com/checkout/preferences' => Http::response([
+                'id' => 'pref-platform-featured-999',
+                'init_point' => 'https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-platform-featured-999',
+                'sandbox_init_point' => 'https://sandbox.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-platform-featured-999',
+            ], 201),
+        ]);
+
+        $response = $this->actingAs($professional->user)
+            ->post(route('professional.commerce.featured.buy', $service), [
+                'days' => 7,
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('commerce_orders', [
+            'professional_id' => $professional->getKey(),
+            'service_id' => $service->getKey(),
+            'kind' => 'featured',
+            'external_preference_id' => 'pref-platform-featured-999',
+        ]);
     }
 
     private function professionalAndService(): array
