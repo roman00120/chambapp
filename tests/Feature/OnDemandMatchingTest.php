@@ -130,8 +130,8 @@ class OnDemandMatchingTest extends TestCase
     {
         $client = User::factory()->client()->create();
         $category = Category::factory()->create();
-        $near = ProfessionalProfile::factory()->create(['latitude' => 19.4326, 'longitude' => -99.1332]);
-        $far = ProfessionalProfile::factory()->create(['latitude' => 19.60, 'longitude' => -99.13]);
+        $near = ProfessionalProfile::factory()->verifiedIdentity()->create(['latitude' => 19.4326, 'longitude' => -99.1332]);
+        $far = ProfessionalProfile::factory()->verifiedIdentity()->create(['latitude' => 19.60, 'longitude' => -99.13]);
         Service::factory()->create(['professional_id' => $near->id, 'category_id' => $category->id]);
         Service::factory()->create(['professional_id' => $far->id, 'category_id' => $category->id]);
 

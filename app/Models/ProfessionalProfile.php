@@ -166,9 +166,11 @@ class ProfessionalProfile extends Model
 
     public function isPubliclyVisible(): bool
     {
+        // verification_status is cast to VerificationStatus enum, so direct comparison is safe.
+        // User must be active and capable of acting as a professional (multimode-aware).
         return $this->verification_status === VerificationStatus::VERIFIED
             && $this->user?->status === UserStatus::ACTIVE
-            && $this->user?->role === UserRole::PROFESSIONAL;
+            && $this->user->canActAsProfessional();
     }
 
     public function verificationLabel(): string

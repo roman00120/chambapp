@@ -180,17 +180,27 @@ class AdminControlPanelTest extends TestCase
         $job = JobRequest::factory()->create(['client_id' => $client->id, 'professional_id' => $professional->id, 'status' => JobStatus::DISPUTED]);
         $payment = Payment::factory()->create(['job_request_id' => $job->id, 'client_id' => $client->id, 'professional_id' => $professional->id, 'status' => PaymentStatus::APPROVED, 'gross_amount' => '700.00', 'platform_fee' => '105.00']);
         $dispute = JobDispute::create(['job_request_id' => $job->id, 'opened_by' => $client->id, 'reason' => 'other', 'status' => JobDisputeStatus::OPEN]);
-        $report = Report::factory()->create(['reporter_id' => $client->id]);
+        $report = \App\Models\UserReport::create([
+            'reporter_id' => $client->id,
+            'reported_id' => $professional->user_id,
+            'category' => 'abusive_behavior',
+            'description' => 'Comportamiento no profesional.',
+            'status' => 'pending',
+        ]);
 
         $this->actingAs($admin)->patch(route('admin.disputes.status', $dispute), ['status' => 'reviewing'])->assertRedirect();
         $this->actingAs($admin)->patch(route('admin.disputes.status', $dispute), ['status' => 'resolved'])->assertRedirect();
-        $this->actingAs($admin)->patch(route('admin.reports.status', $report), ['status' => 'resolved'])->assertRedirect();
+        $this->actingAs($admin)->post(route('admin.reports.resolve', $report), [
+            'decision' => 'invalid',
+            'reason_code' => 'insufficient_evidence',
+            'reason_text' => 'Evidencia insuficiente.',
+        ])->assertRedirect();
         $this->assertSame('resolved', $dispute->fresh()->status->value);
         $this->assertNotNull($dispute->fresh()->resolved_at);
-        $this->assertSame('resolved', $report->fresh()->status->value);
+        $this->assertSame('resolved_invalid', $report->fresh()->status);
         $this->assertSame('approved', $payment->fresh()->status->value);
         $this->assertSame('105.00', $payment->fresh()->platform_fee);
         $this->assertDatabaseHas('admin_audit_logs', ['action' => 'dispute.resolved']);
-        $this->assertDatabaseHas('admin_audit_logs', ['action' => 'report.resolved']);
+        $this->assertDatabaseHas('admin_audit_logs', ['action' => 'disciplinary.report.resolved']);
     }
 }

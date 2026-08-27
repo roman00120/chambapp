@@ -31,7 +31,7 @@ class VisualSystemTest extends TestCase
     public function test_each_dashboard_exposes_role_specific_mobile_navigation(): void
     {
         $client = User::factory()->client()->create();
-        $professional = User::factory()->professional()->create();
+        $professional = User::factory()->professionalVerified()->create();
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($client)->get(route('client.dashboard'))

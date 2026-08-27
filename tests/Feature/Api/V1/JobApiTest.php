@@ -8,6 +8,7 @@ use App\Enums\JobStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\QuoteStatus;
 use App\Enums\ServiceMode;
+use App\Enums\UserStatus;
 use App\Models\Category;
 use App\Models\JobInvitation;
 use App\Models\JobQuote;
@@ -69,8 +70,10 @@ class JobApiTest extends TestCase
     {
         $this->getJson('/api/v1/jobs')->assertUnauthorized();
 
-        $professional = ProfessionalProfile::factory()->create();
-        Sanctum::actingAs($professional->user);
+        // In multimode, an active professional can also act as a client.
+        // Use a suspended professional to verify the role gate truly blocks inactive users.
+        $suspendedPro = User::factory()->professional()->create(['status' => UserStatus::SUSPENDED]);
+        Sanctum::actingAs($suspendedPro);
         $this->getJson('/api/v1/jobs')->assertForbidden();
 
         $client = User::factory()->client()->create();
@@ -238,7 +241,7 @@ class JobApiTest extends TestCase
 
     public function test_availability_validates_coordinates_and_radius(): void
     {
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         Sanctum::actingAs($professional->user);
 
         $this->putJson('/api/v1/professional/availability', [
@@ -291,7 +294,7 @@ class JobApiTest extends TestCase
     {
         $client = User::factory()->client()->create();
         $other = User::factory()->client()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,
@@ -322,7 +325,7 @@ class JobApiTest extends TestCase
     public function test_client_owner_can_reject_quote_and_existing_accept_action_still_works(): void
     {
         $client = User::factory()->client()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,
@@ -546,7 +549,7 @@ class JobApiTest extends TestCase
     public function test_paid_job_workflow_and_review_complete_via_api(): void
     {
         $client = User::factory()->client()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,
@@ -571,7 +574,7 @@ class JobApiTest extends TestCase
 
     private function availableProfessional(): ProfessionalProfile
     {
-        return ProfessionalProfile::factory()->create([
+        return ProfessionalProfile::factory()->verifiedIdentity()->create([
             'is_available' => true,
             'availability_status' => AvailabilityStatus::AVAILABLE,
             'last_latitude' => '20.6700000',

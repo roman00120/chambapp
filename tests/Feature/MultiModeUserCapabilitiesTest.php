@@ -104,7 +104,7 @@ class MultiModeUserCapabilitiesTest extends TestCase
         $profile = ProfessionalProfile::factory()->create(['user_id' => $user->id]);
         $category = Category::factory()->create();
         $service = Service::factory()->create([
-            'professional_profile_id' => $profile->id,
+            'professional_id' => $profile->id,
             'category_id' => $category->id,
             'is_active' => true,
         ]);
@@ -152,7 +152,6 @@ class MultiModeUserCapabilitiesTest extends TestCase
             'job_request_id' => $job->id,
             'professional_id' => $profile->id,
             'client_id' => $user->id,
-            'amount' => '1000.00',
             'gross_amount' => '1150.00',
             'status' => PaymentStatus::PENDING,
         ]);
@@ -206,8 +205,8 @@ class MultiModeUserCapabilitiesTest extends TestCase
 
         // Con verificación aprobada
         ProfessionalIdentityVerification::create([
-            'professional_profile_id' => $profile->id,
-            'provider' => 'didit',
+            'professional_id' => $profile->id,
+            'verification_provider' => 'didit',
             'status' => IdentityVerificationStatus::VERIFIED,
             'verified_at' => now(),
         ]);

@@ -143,7 +143,7 @@ class DisciplinaryService
                         'user_id' => $reportedUser->id,
                         'source_report_id' => $report->id,
                         'action_type' => DisciplinaryActionType::YELLOW_CARD,
-                        'severity' => $report->severity_reported,
+                        'severity' => $report->severity_reported ?? ReportSeverity::MEDIUM,
                         'reason_code' => $reasonCode ?: $report->category->value,
                         'reason_text' => $reasonText ?: 'Advertencia emitida por moderación tras revisión de reporte.',
                         'status' => DisciplinaryActionStatus::ACTIVE,

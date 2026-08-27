@@ -62,7 +62,7 @@ class PublicApiTest extends TestCase
 
     public function test_professional_detail_exposes_only_public_location_and_content(): void
     {
-        $professional = ProfessionalProfile::factory()->create([
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create([
             'verification_status' => VerificationStatus::VERIFIED,
             'city' => 'Guadalajara',
             'state' => 'Jalisco',

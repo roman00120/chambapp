@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\PaymentStatus;
+use App\Enums\UserStatus;
 use App\Models\Category;
 use App\Models\JobRequest;
 use App\Models\Payment;
@@ -67,7 +68,10 @@ class AccountFeaturesApiTest extends TestCase
         $this->deleteJson('/api/v1/favorites/'.$professional->id)->assertOk();
         $this->assertDatabaseCount('favorites', 0);
 
-        Sanctum::actingAs($professional->user);
+        // In multimode, active professionals CAN act as clients.
+        // A suspended user cannot act as a client (canActAsClient requires isActive()).
+        $suspendedPro = User::factory()->professional()->create(['status' => UserStatus::SUSPENDED]);
+        Sanctum::actingAs($suspendedPro);
         $this->getJson('/api/v1/favorites')->assertForbidden();
     }
 

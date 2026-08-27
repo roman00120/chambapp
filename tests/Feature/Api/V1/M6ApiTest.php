@@ -21,7 +21,7 @@ class M6ApiTest extends TestCase
     public function test_complete_paid_m6_workflow_uses_explicit_actions_and_keeps_payment_immutable(): void
     {
         $client = User::factory()->client()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,

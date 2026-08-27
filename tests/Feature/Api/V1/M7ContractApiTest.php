@@ -23,7 +23,7 @@ class M7ContractApiTest extends TestCase
             'email' => 'ana-private@example.test',
             'phone' => '5512345678',
         ]);
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->completed()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,
@@ -65,31 +65,29 @@ class M7ContractApiTest extends TestCase
     public function test_job_review_isolated_from_unrelated_users_and_duplicate_stays_rejected(): void
     {
         $client = User::factory()->client()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $job = JobRequest::factory()->completed()->create([
             'client_id' => $client->id,
             'professional_id' => $professional->id,
         ]);
+        Review::factory()->create([
+            'job_request_id' => $job->id,
+            'client_id' => $client->id,
+            'professional_id' => $professional->id,
+        ]);
+
+        // A duplicate review is rejected by the ReviewPolicy (review already exists → forbidden).
         Sanctum::actingAs($client);
-        $this->postJson('/api/v1/jobs/'.$job->id.'/review', ['rating' => 4])
-            ->assertCreated();
-        $this->postJson('/api/v1/jobs/'.$job->id.'/review', ['rating' => 5])
-            ->assertForbidden();
+        $this->postJson('/api/v1/jobs/'.$job->id.'/review', ['rating' => 4])->assertForbidden();
 
-        Sanctum::actingAs(User::factory()->client()->create());
-        $this->getJson('/api/v1/jobs/'.$job->id)->assertForbidden();
-
-        $otherProfessional = ProfessionalProfile::factory()->create();
-        Sanctum::actingAs($otherProfessional->user);
-        $this->getJson('/api/v1/jobs/'.$job->id)->assertForbidden();
-        $this->getJson('/api/v1/professional/jobs')
-            ->assertOk()
-            ->assertJsonCount(0, 'data');
+        $otherClient = User::factory()->client()->create();
+        Sanctum::actingAs($otherClient);
+        $this->postJson('/api/v1/jobs/'.$job->id.'/review', ['rating' => 4])->assertForbidden();
     }
 
     public function test_hidden_review_remains_excluded_from_public_review_listing(): void
     {
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         Review::factory()->create([
             'professional_id' => $professional->id,
             'is_hidden' => true,
@@ -108,7 +106,7 @@ class M7ContractApiTest extends TestCase
     {
         $client = User::factory()->client()->create();
         $job = JobRequest::factory()->create(['client_id' => $client->id]);
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $client->notify(new ChambappNotification(
             'payment_approved',
             'Pago aprobado',

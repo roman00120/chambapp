@@ -122,7 +122,7 @@ class AchievementSystemTest extends TestCase
             'client_id' => $client->id,
             'professional_id' => $profile->id,
             'category_id' => $category->id,
-            'status' => JobStatus::CANCELLED_BY_CLIENT,
+            'status' => JobStatus::CANCELLED,
         ]);
 
         // 1 auto-contratación completada

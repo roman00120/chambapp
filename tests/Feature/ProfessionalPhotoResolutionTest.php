@@ -21,19 +21,16 @@ class ProfessionalPhotoResolutionTest extends TestCase
     {
         Storage::fake('public');
 
-        $user = User::factory()->create([
-            'name' => 'Carlos Mendoza',
-            'role' => UserRole::PROFESSIONAL,
-            'status' => UserStatus::ACTIVE,
-        ]);
-
         $photo = UploadedFile::fake()->image('carlos.jpg', 400, 400);
         $path = $photo->store('profiles', 'public');
 
-        $profile = ProfessionalProfile::factory()->create([
-            'user_id' => $user->id,
+        $user = $this->createVerifiedProfessional([
+            'name' => 'Carlos Mendoza',
+            'status' => UserStatus::ACTIVE,
+        ], [
             'profile_photo' => $path,
         ]);
+        $profile = $user->professionalProfile;
 
         $expectedUrl = Storage::disk('public')->url($path);
 
@@ -41,12 +38,24 @@ class ProfessionalPhotoResolutionTest extends TestCase
         $this->assertEquals($expectedUrl, $user->profilePhotoUrl());
 
         // Test API response
-        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/auth/me');
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/me');
         $response->assertOk();
         $response->assertJsonPath('data.avatar', $expectedUrl);
         $response->assertJsonPath('data.profile_photo_url', $expectedUrl);
 
+        $profile = $profile->fresh(['user', 'identityVerification']);
         $proResponse = $this->getJson("/api/v1/professionals/{$profile->id}");
+        if ($proResponse->status() !== 200) {
+            dump([
+                'status' => $proResponse->status(),
+                'profile_id' => $profile->id,
+                'verification_status' => $profile->verification_status?->value,
+                'user_status' => $profile->user?->status?->value,
+                'user_role' => $profile->user?->role?->value,
+                'canActAsPro' => $profile->user?->canActAsProfessional(),
+                'isPubliclyVisible' => $profile->isPubliclyVisible(),
+            ]);
+        }
         $proResponse->assertOk();
         $proResponse->assertJsonPath('data.avatar', $expectedUrl);
         $proResponse->assertJsonPath('data.profile_photo_url', $expectedUrl);

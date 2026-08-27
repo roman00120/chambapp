@@ -222,7 +222,7 @@ class CommercePaymentHardeningTest extends TestCase
 
     private function professionalAndService(): array
     {
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $service = Service::factory()->create(['professional_id' => $professional->getKey()]);
 
         return [$professional, $service];

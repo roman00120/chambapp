@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Enums\IdentityVerificationStatus;
+use Database\Factories\ProfessionalIdentityVerificationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProfessionalIdentityVerification extends Model
 {
+    /** @use HasFactory<ProfessionalIdentityVerificationFactory> */
+    use HasFactory;
     protected $fillable = [
         'professional_id', 'verification_provider', 'provider_verification_id',
         'provider_session_id', 'status', 'provider_status', 'started_at',

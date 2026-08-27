@@ -11,7 +11,16 @@ class StoreJobRequestRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isClient() === true;
+        if (! $this->user()?->isClient()) {
+            return false;
+        }
+
+        $service = $this->route('service');
+        if ($service && $service->professional?->user_id === $this->user()->id) {
+            return false;
+        }
+
+        return true;
     }
 
     public function rules(): array

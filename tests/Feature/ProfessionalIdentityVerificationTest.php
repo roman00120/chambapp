@@ -20,6 +20,7 @@ class ProfessionalIdentityVerificationTest extends TestCase
 
     public function test_existing_professional_without_record_has_safe_fallback_and_feature_flag_is_backward_compatible(): void
     {
+        config()->set('chambapp.identity_verification.required', false);
         $profile = ProfessionalProfile::factory()->create();
         $service = app(ProfessionalIdentityVerificationService::class);
 

@@ -201,7 +201,7 @@ class QuotesAndNotificationsTest extends TestCase
     {
         $client = User::factory()->client()->create(['email' => 'client@example.test', 'phone' => '5512345678']);
         $professional = User::factory()->professional()->create(['email' => 'pro@example.test', 'phone' => '5587654321']);
-        $profile = ProfessionalProfile::factory()->create(['user_id' => $professional->id]);
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create(['user_id' => $professional->id]);
         $service = Service::factory()->create(['professional_id' => $profile->id]);
         $job = JobRequest::factory()->create(array_merge([
             'client_id' => $client->id,

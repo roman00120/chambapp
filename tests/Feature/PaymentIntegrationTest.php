@@ -69,7 +69,7 @@ class PaymentIntegrationTest extends TestCase
     {
         $client = User::factory()->client()->create();
         $professional = User::factory()->professional()->create();
-        $profile = ProfessionalProfile::factory()->create([
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create([
             'user_id' => $professional->id,
             'mercadopago_user_id' => 'seller-dual',
             'mercadopago_access_token' => 'seller-token',
@@ -658,7 +658,7 @@ class PaymentIntegrationTest extends TestCase
                 'mercadopago_token_expires_at' => now()->addMonths(5),
             ];
         }
-        $profile = ProfessionalProfile::factory()->create($profileData);
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create($profileData);
         $service = Service::factory()->create(['professional_id' => $profile->id]);
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,

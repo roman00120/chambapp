@@ -21,7 +21,7 @@ class MarketplaceTest extends TestCase
     public function test_marketplace_searches_by_service_category_and_professional(): void
     {
         $category = Category::factory()->create(['name' => 'Plomería', 'slug' => 'plomeria']);
-        $professional = ProfessionalProfile::factory()->create([
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create([
             'city' => 'Puebla',
             'bio' => 'Especialista en instalaciones de agua.',
         ]);
@@ -48,8 +48,8 @@ class MarketplaceTest extends TestCase
     public function test_marketplace_applies_price_city_rating_and_sort_filters(): void
     {
         $category = Category::factory()->create();
-        $puebla = ProfessionalProfile::factory()->create(['city' => 'Puebla', 'average_rating' => 4.8, 'total_reviews' => 8]);
-        $jalisco = ProfessionalProfile::factory()->create(['city' => 'Guadalajara', 'average_rating' => 3.5, 'total_reviews' => 4]);
+        $puebla = ProfessionalProfile::factory()->verifiedIdentity()->create(['city' => 'Puebla', 'average_rating' => 4.8, 'total_reviews' => 8]);
+        $jalisco = ProfessionalProfile::factory()->verifiedIdentity()->create(['city' => 'Guadalajara', 'average_rating' => 3.5, 'total_reviews' => 4]);
         $low = Service::factory()->create(['professional_id' => $puebla->id, 'category_id' => $category->id, 'price' => 300, 'price_type' => PriceType::FIXED]);
         Service::factory()->create(['professional_id' => $jalisco->id, 'category_id' => $category->id, 'price' => 1200, 'price_type' => PriceType::STARTING_AT]);
 
@@ -64,7 +64,7 @@ class MarketplaceTest extends TestCase
     public function test_marketplace_validates_filters_and_keeps_pagination(): void
     {
         $category = Category::factory()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         Service::factory()->count(13)->create(['professional_id' => $professional->id, 'category_id' => $category->id]);
 
         $this->get(route('marketplace.search', ['q' => str_repeat('x', 101)]))
@@ -82,8 +82,8 @@ class MarketplaceTest extends TestCase
     {
         $activeCategory = Category::factory()->create();
         $inactiveCategory = Category::factory()->create(['is_active' => false]);
-        $visible = ProfessionalProfile::factory()->create();
-        $suspended = ProfessionalProfile::factory()->create();
+        $visible = ProfessionalProfile::factory()->verifiedIdentity()->create();
+        $suspended = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $suspended->user->update(['status' => UserStatus::SUSPENDED]);
         $visibleService = Service::factory()->create(['professional_id' => $visible->id, 'category_id' => $activeCategory->id, 'title' => 'Visible marketplace service']);
         Service::factory()->create(['professional_id' => $visible->id, 'category_id' => $inactiveCategory->id, 'title' => 'Hidden inactive category']);
@@ -102,7 +102,7 @@ class MarketplaceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Carpintería', 'slug' => 'carpinteria']);
         $user = User::factory()->professional()->create(['name' => 'Ana Pública', 'email' => 'ana-private@example.test', 'phone' => '5511112222']);
-        $profile = ProfessionalProfile::factory()->create(['user_id' => $user->id, 'bio' => 'Muebles a medida.']);
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create(['user_id' => $user->id, 'bio' => 'Muebles a medida.']);
         $service = Service::factory()->create(['professional_id' => $profile->id, 'category_id' => $category->id, 'title' => 'Muebles a medida']);
         Service::factory()->create(['professional_id' => $profile->id, 'category_id' => $category->id, 'title' => 'Servicio desactivado', 'is_active' => false]);
 
@@ -123,7 +123,7 @@ class MarketplaceTest extends TestCase
     {
         Storage::fake('public');
         $category = Category::factory()->create();
-        $profile = ProfessionalProfile::factory()->create();
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $service = Service::factory()->create(['professional_id' => $profile->id, 'category_id' => $category->id, 'description' => 'Servicio público de prueba.']);
         $service->images()->create(['path' => 'services/test.jpg', 'alt_text' => 'Imagen del servicio', 'is_cover' => true]);
 
@@ -140,7 +140,7 @@ class MarketplaceTest extends TestCase
     public function test_clients_can_toggle_unique_favorites_and_view_their_list(): void
     {
         $client = User::factory()->client()->create();
-        $profile = ProfessionalProfile::factory()->create();
+        $profile = ProfessionalProfile::factory()->verifiedIdentity()->create();
 
         $this->actingAs($client)->post(route('professional.favorite.toggle', $profile))
             ->assertRedirect()
@@ -159,7 +159,7 @@ class MarketplaceTest extends TestCase
     {
         $profile = ProfessionalProfile::factory()->create();
         $this->post(route('professional.favorite.toggle', $profile))->assertRedirect(route('login'));
-        $professional = User::factory()->professional()->create();
-        $this->actingAs($professional)->post(route('professional.favorite.toggle', $profile))->assertForbidden();
+        $suspended = User::factory()->suspended()->create();
+        $this->actingAs($suspended)->post(route('professional.favorite.toggle', $profile))->assertRedirect(route('login'));
     }
 }

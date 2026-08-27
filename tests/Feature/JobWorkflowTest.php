@@ -195,7 +195,7 @@ class JobWorkflowTest extends TestCase
     private function service(array $attributes = []): array
     {
         $category = Category::factory()->create();
-        $professional = ProfessionalProfile::factory()->create();
+        $professional = ProfessionalProfile::factory()->verifiedIdentity()->create();
         $service = Service::factory()->create(array_merge([
             'professional_id' => $professional->id,
             'category_id' => $category->id,

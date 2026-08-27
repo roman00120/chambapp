@@ -166,7 +166,7 @@ class CompletionAndReviewsTest extends TestCase
     private function job(JobStatus $status, ?User $client = null, ?ProfessionalProfile $professional = null): array
     {
         $client ??= User::factory()->client()->create();
-        $professional ??= ProfessionalProfile::factory()->create();
+        $professional ??= ProfessionalProfile::factory()->verifiedIdentity()->create();
         $service = Service::factory()->create(['professional_id' => $professional->id]);
         $job = JobRequest::factory()->create([
             'client_id' => $client->id,

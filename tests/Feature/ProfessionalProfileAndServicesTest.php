@@ -261,6 +261,7 @@ class ProfessionalProfileAndServicesTest extends TestCase
     {
         [$user, $profile] = $this->professional();
         $profile->update(['verification_status' => VerificationStatus::VERIFIED]);
+        $this->verifyProfessionalIdentity($profile);
         $category = Category::factory()->create(['is_active' => true]);
         $visible = Service::factory()->create([
             'professional_id' => $profile->id,

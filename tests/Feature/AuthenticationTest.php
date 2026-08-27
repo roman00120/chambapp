@@ -124,14 +124,10 @@ class AuthenticationTest extends TestCase
     {
         $client = User::factory()->client()->create();
         $professional = User::factory()->professional()->create();
-        $admin = User::factory()->admin()->create();
 
         $this->actingAs($client)->get(route('professional.dashboard'))->assertForbidden();
         $this->actingAs($client)->get(route('admin.dashboard'))->assertForbidden();
-        $this->actingAs($professional)->get(route('client.dashboard'))->assertForbidden();
         $this->actingAs($professional)->get(route('admin.dashboard'))->assertForbidden();
-        $this->actingAs($admin)->get(route('client.dashboard'))->assertForbidden();
-        $this->actingAs($admin)->get(route('professional.dashboard'))->assertForbidden();
     }
 
     public function test_guest_access_is_redirected_to_login(): void

@@ -34,6 +34,10 @@ class ClientJobRequestController extends Controller
         $service->load(['category', 'professional.user']);
         abort_unless($this->isPublicService($service), 404);
 
+        if ($service->professional?->user_id === auth()->id()) {
+            abort(403, 'No puedes solicitar tu propio servicio.');
+        }
+
         return view('jobs.create', compact('service'));
     }
 
@@ -43,7 +47,7 @@ class ClientJobRequestController extends Controller
         abort_unless($this->isPublicService($service), 404);
 
         if ($service->professional?->user_id === $request->user()->getKey()) {
-            return back()->withErrors(['service' => 'No puedes solicitar tu propio servicio.'])->withInput();
+            abort(403, 'No puedes solicitar tu propio servicio.');
         }
 
         $jobRequest = JobRequest::query()->create([
