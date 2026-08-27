@@ -75,12 +75,7 @@ class JobRequestService
         ]);
 
         if ($service?->professional?->user) {
-            $service->professional->user->notify(new \App\Notifications\ChambappNotification(
-                'job_requested',
-                'Nueva solicitud de servicio',
-                $job->title,
-                route('job-requests.show', $job),
-            ));
+            $service->professional->user->notify(new \App\Notifications\DirectServiceRequestedNotification($job->loadMissing(['client', 'service'])));
         }
 
         return $job;

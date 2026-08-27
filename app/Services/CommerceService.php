@@ -445,6 +445,8 @@ class CommerceService
                 'featured_until' => $start->copy()->addDays($days),
             ])->save();
 
+            $professional->user?->notify(new \App\Notifications\PromotionActivatedNotification($service, $days));
+
             return;
         }
 

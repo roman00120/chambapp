@@ -353,17 +353,14 @@ class PaymentService
                 }
             } elseif ($mappedStatus === PaymentStatus::APPROVED && $isJobPayment && $job->status === JobStatus::AWAITING_PAYMENT) {
                 $job->forceFill(['status' => JobStatus::PAID])->save();
-                $lockedPayment->client?->notify(new ChambappNotification(
-                    'payment_approved',
-                    'Tu pago fue aprobado',
-                    'El trabajo ya está contratado dentro de Chambapp.',
-                    route('job-requests.show', $job),
+                $loadedJob = $job->fresh(['client', 'professional.user', 'service']);
+                $lockedPayment->client?->notify(new \App\Notifications\PaymentConfirmedClientNotification(
+                    $loadedJob,
+                    $lockedPayment
                 ));
-                $lockedPayment->professional?->user?->notify(new ChambappNotification(
-                    'payment_approved_professional',
-                    'El cliente realizó el pago',
-                    'Ya puedes coordinar e iniciar el trabajo.',
-                    route('job-requests.show', $job),
+                $lockedPayment->professional?->user?->notify(new \App\Notifications\PaymentConfirmedProfessionalNotification(
+                    $loadedJob,
+                    $lockedPayment
                 ));
             } elseif ($mappedStatus === PaymentStatus::REJECTED && $previousStatus !== PaymentStatus::REJECTED) {
                 $lockedPayment->client?->notify(new ChambappNotification(

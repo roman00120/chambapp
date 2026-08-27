@@ -24,11 +24,10 @@ class JobWorkflowService
     public function reject(JobRequest $jobRequest): JobRequest
     {
         $job = $this->transition($jobRequest, JobStatus::PENDING, JobStatus::REJECTED, ['cancelled_at' => null]);
-        $job->client?->notify(new ChambappNotification(
-            'job_rejected',
-            'Solicitud rechazada',
+        $job->client?->notify(new \App\Notifications\JobCancelledNotification(
+            $job,
             'El profesional no podrá atender esta solicitud.',
-            route('job-requests.show', $job),
+            route('job-requests.show', $job)
         ));
 
         return $job;
@@ -45,14 +44,34 @@ class JobWorkflowService
     {
         $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
 
-        return $this->transition($jobRequest, JobStatus::PAID, JobStatus::ON_THE_WAY, ['on_the_way_at' => now()]);
+        $job = $this->transition($jobRequest, JobStatus::PAID, JobStatus::ON_THE_WAY, ['on_the_way_at' => now()]);
+        $job->client?->notify(new \App\Notifications\JobStatusUpdatedNotification(
+            $job,
+            'El profesional está en camino',
+            'Tu profesional va rumbo a la ubicación acordada.',
+            'En camino',
+            route('job-requests.show', $job),
+            'job_on_the_way'
+        ));
+
+        return $job;
     }
 
     public function arrive(JobRequest $jobRequest): JobRequest
     {
         $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
 
-        return $this->transition($jobRequest, JobStatus::ON_THE_WAY, JobStatus::ARRIVED, ['arrived_at' => now()]);
+        $job = $this->transition($jobRequest, JobStatus::ON_THE_WAY, JobStatus::ARRIVED, ['arrived_at' => now()]);
+        $job->client?->notify(new \App\Notifications\JobStatusUpdatedNotification(
+            $job,
+            'El profesional ha llegado',
+            'Tu profesional ha llegado a la ubicación.',
+            'Llegó',
+            route('job-requests.show', $job),
+            'job_arrived'
+        ));
+
+        return $job;
     }
 
     public function finish(JobRequest $jobRequest): JobRequest
@@ -95,17 +114,14 @@ class JobWorkflowService
                     ->count(),
             ])->save();
             $job = $job->fresh(['client', 'professional.user', 'service']);
-            $job->client?->notify(new ChambappNotification(
-                'review_requested',
-                '¿Cómo fue tu experiencia?',
-                'Califica al profesional para ayudar a otros clientes.',
-                route('reviews.create', $job),
-            ));
-            $job->professional?->user?->notify(new ChambappNotification(
-                'job_completed',
+            $job->client?->notify(new \App\Notifications\JobCompletedNotification($job));
+            $job->professional?->user?->notify(new \App\Notifications\JobStatusUpdatedNotification(
+                $job,
                 'Trabajo completado',
                 'El cliente confirmó que el trabajo terminó correctamente.',
+                'Completado',
                 route('job-requests.show', $job),
+                'job_completed'
             ));
 
             return $job;
@@ -145,11 +161,10 @@ class JobWorkflowService
             'cancellation_reason' => $reason,
         ]);
         $recipient = $actor?->getKey() === $job->client_id ? $job->professional?->user : $job->client;
-        $recipient?->notify(new ChambappNotification(
-            'job_cancelled',
-            'Trabajo cancelado',
-            'Una solicitud de trabajo fue cancelada.',
-            route('job-requests.show', $job),
+        $recipient?->notify(new \App\Notifications\JobCancelledNotification(
+            $job,
+            $reason ?? 'Una solicitud de trabajo fue cancelada.',
+            route('job-requests.show', $job)
         ));
 
         return $job;
@@ -187,13 +202,9 @@ class JobWorkflowService
                 'status' => QuoteStatus::PENDING,
                 'expires_at' => now()->addHours(48),
             ]);
-            $quote->load(['jobRequest.service', 'professional.user']);
-            $job->client?->notify(new ChambappNotification(
-                'quote_created',
-                'Recibiste una nueva cotización',
-                ($job->service?->title ?? 'Tu solicitud').' — '.$quote->formattedAmount(),
-                route('job-requests.show', $job),
-            ));
+            $quote->load(['jobRequest.service', 'jobRequest.client', 'professional.user']);
+            $breakdown = $this->paymentCalculation->calculateJob((string) $quote->amount);
+            $job->client?->notify(new \App\Notifications\QuoteReceivedNotification($quote, $breakdown));
 
             return $quote;
         });
@@ -237,12 +248,7 @@ class JobWorkflowService
                 'platform_gross_fee' => $money->platformGrossFee,
                 'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
             ])->save();
-            $quote->professional?->user?->notify(new ChambappNotification(
-                'quote_accepted',
-                'El cliente aceptó tu cotización',
-                ($job->service?->title ?? 'Tu trabajo').' — '.$quote->formattedAmount(),
-                route('job-requests.show', $job),
-            ));
+            $quote->professional?->user?->notify(new \App\Notifications\QuoteAcceptedNotification($quote));
             $client->notify(new ChambappNotification(
                 'job_awaiting_payment',
                 'Cotización aceptada: pendiente de pago',

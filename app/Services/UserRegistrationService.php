@@ -45,6 +45,8 @@ class UserRegistrationService
                 $data['legal_user_agent'] ?? null,
             );
 
+            $user->notify(new \App\Notifications\WelcomeNotification($user));
+
             return $user->load('professionalProfile');
         });
     }

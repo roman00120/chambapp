@@ -63,11 +63,8 @@ class ClientJobRequestController extends Controller
             'postal_code' => $request->validated('postal_code'),
             'status' => 'pending',
         ]);
-        $service->professional?->user?->notify(new ChambappNotification(
-            'job_requested',
-            'Nueva solicitud de servicio',
-            $jobRequest->title,
-            route('job-requests.show', $jobRequest),
+        $service->professional?->user?->notify(new \App\Notifications\DirectServiceRequestedNotification(
+            $jobRequest->loadMissing(['client', 'service'])
         ));
 
         return redirect()->route('job-requests.show', $jobRequest)
