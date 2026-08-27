@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chambapp-static-v1';
+const CACHE_NAME = 'chambapp-static-v2';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
     OFFLINE_URL,
@@ -41,11 +41,19 @@ self.addEventListener('fetch', (event) => {
 
     if (isStaticAsset(request, url)) {
         event.respondWith(
-            caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-                return response;
-            })),
+            caches.match(request).then((cached) => {
+                if (cached && cached.status === 200) {
+                    return cached;
+                }
+
+                return fetch(request).then((response) => {
+                    if (response && response.status === 200 && (response.type === 'basic' || response.type === 'default')) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                    }
+                    return response;
+                });
+            }),
         );
     }
 });
