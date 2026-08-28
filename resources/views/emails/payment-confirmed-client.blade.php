@@ -23,13 +23,13 @@
             <td class="info-label">PROFESIONAL</td>
             <td class="info-value">{{ $job->professional?->user?->name ?? 'Profesional asignado' }}</td>
         </tr>
-        <tr class="info-row" style="background-color: #f0fdf4;">
-            <td class="info-label" style="font-weight: 700; color: #166534;">MONTO TOTAL</td>
-            <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) ($payment->customer_total ?? $payment->gross_amount), 2) }} MXN</td>
+        <tr class="info-row" style="background-color: #e3f5e9;">
+            <td class="info-label" style="font-weight: 700; color: #17623f;">MONTO TOTAL</td>
+            <td class="info-value" style="font-size: 16px; color: #2d8a62; font-weight: 800;">${{ number_format((float) ($payment->customer_total ?? $payment->gross_amount), 2) }} MXN</td>
         </tr>
         <tr class="info-row">
             <td class="info-label">ESTADO</td>
-            <td class="info-value" style="color: #16a34a;">Pago protegido en custodia ✓</td>
+            <td class="info-value" style="color: #2d8a62;">Pago protegido en custodia ✓</td>
         </tr>
     </table>
 

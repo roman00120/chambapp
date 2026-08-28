@@ -23,13 +23,13 @@
             <td class="info-label">CLIENTE</td>
             <td class="info-value">{{ $job->client?->name ?? 'Cliente' }}</td>
         </tr>
-        <tr class="info-row" style="background-color: #f0fdf4;">
-            <td class="info-label" style="font-weight: 700; color: #166534;">TU PAGO ASEGURADO</td>
-            <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) ($payment->professional_amount ?? $payment->gross_amount), 2) }} MXN</td>
+        <tr class="info-row" style="background-color: #e3f5e9;">
+            <td class="info-label" style="font-weight: 700; color: #17623f;">TU PAGO ASEGURADO</td>
+            <td class="info-value" style="font-size: 16px; color: #2d8a62; font-weight: 800;">${{ number_format((float) ($payment->professional_amount ?? $payment->gross_amount), 2) }} MXN</td>
         </tr>
         <tr class="info-row">
             <td class="info-label">ESTADO</td>
-            <td class="info-value" style="color: #16a34a;">Listo para iniciar ✓</td>
+            <td class="info-value" style="color: #2d8a62;">Listo para iniciar ✓</td>
         </tr>
     </table>
 

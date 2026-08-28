@@ -26,7 +26,7 @@
         @endif
         <tr class="info-row">
             <td class="info-label">ESTADO</td>
-            <td class="info-value" style="color: #ef4444;">Cancelado</td>
+            <td class="info-value" style="color: #c94d45; font-weight: 800;">Cancelado</td>
         </tr>
     </table>
 

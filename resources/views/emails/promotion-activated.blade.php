@@ -35,7 +35,7 @@
         @endif
         <tr class="info-row">
             <td class="info-label">ESTADO</td>
-            <td class="info-value" style="color: #16a34a;">Activo y destacado ✓</td>
+            <td class="info-value" style="color: #2d8a62;">Activo y destacado ✓</td>
         </tr>
     </table>
 

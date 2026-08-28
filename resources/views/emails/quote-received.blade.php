@@ -32,20 +32,20 @@
                 <td class="info-label">SERVICIO CHAMBAPP (15%)</td>
                 <td class="info-value">${{ number_format((float) $breakdown->clientServiceFee, 2) }} MXN</td>
             </tr>
-            <tr class="info-row" style="background-color: #f0fdf4;">
-                <td class="info-label" style="font-weight: 700; color: #166534; font-size: 14px;">TOTAL A PAGAR</td>
-                <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) $breakdown->customerTotal, 2) }} MXN</td>
+            <tr class="info-row" style="background-color: #e3f5e9;">
+                <td class="info-label" style="font-weight: 700; color: #17623f; font-size: 13px;">TOTAL A PAGAR</td>
+                <td class="info-value" style="font-size: 16px; color: #2d8a62; font-weight: 800;">${{ number_format((float) $breakdown->customerTotal, 2) }} MXN</td>
             </tr>
         @else
-            <tr class="info-row" style="background-color: #f0fdf4;">
-                <td class="info-label" style="font-weight: 700; color: #166534; font-size: 14px;">TOTAL ESTIMADO</td>
-                <td class="info-value" style="font-size: 16px; color: #15803d; font-weight: 800;">${{ number_format((float) $quote->amount, 2) }} MXN</td>
+            <tr class="info-row" style="background-color: #e3f5e9;">
+                <td class="info-label" style="font-weight: 700; color: #17623f; font-size: 13px;">TOTAL ESTIMADO</td>
+                <td class="info-value" style="font-size: 16px; color: #2d8a62; font-weight: 800;">${{ number_format((float) $quote->amount, 2) }} MXN</td>
             </tr>
         @endif
     </table>
 
     @if ($quote->notes)
-        <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin: 20px 0; text-align: left; font-size: 14px; color: #334155; font-style: italic;">
+        <div class="callout-box">
             "{{ $quote->notes }}"
         </div>
     @endif

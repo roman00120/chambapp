@@ -44,7 +44,7 @@
     </table>
 
     @if ($job->description)
-        <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin: 20px 0; text-align: left; font-size: 14px; color: #334155; font-style: italic;">
+        <div class="callout-box">
             "{{ $job->description }}"
         </div>
     @endif

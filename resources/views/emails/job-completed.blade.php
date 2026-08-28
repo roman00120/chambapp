@@ -25,7 +25,7 @@
         </tr>
         <tr class="info-row">
             <td class="info-label">ESTADO</td>
-            <td class="info-value" style="color: #16a34a;">Completado con éxito ✓</td>
+            <td class="info-value" style="color: #2d8a62;">Completado con éxito ✓</td>
         </tr>
     </table>
 
