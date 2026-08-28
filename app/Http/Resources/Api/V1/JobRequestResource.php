@@ -62,14 +62,16 @@ class JobRequestResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'client_id' => $this->client_id,
+            'professional_id' => $this->professional_id,
             'title' => $this->title,
             'description' => $this->description,
             'service_mode' => $this->service_mode?->value,
             'status' => $this->status?->value,
             'status_label' => $this->statusLabel(),
-            'category' => new CategoryResource($this->whenLoaded('category')),
-            'service' => new ServiceResource($this->whenLoaded('service')),
-            'professional' => new ProfessionalResource($this->whenLoaded('professional')),
+            'category' => $this->whenLoaded('category', fn () => $this->category ? new CategoryResource($this->category) : null),
+            'service' => $this->whenLoaded('service', fn () => $this->service ? new ServiceResource($this->service) : null),
+            'professional' => $this->whenLoaded('professional', fn () => $this->professional ? new ProfessionalResource($this->professional) : null),
             'city' => $this->city,
             'state' => $this->state,
             'address' => $this->when($private, $this->address),
@@ -85,7 +87,7 @@ class JobRequestResource extends JsonResource
             'search_radius_km' => $this->search_radius_km !== null ? (string) $this->search_radius_km : null,
             'search_expires_at' => $this->search_expires_at?->toIso8601String(),
             'quotes' => JobQuoteResource::collection($this->whenLoaded('quotes')),
-            'payment' => new PaymentResource($this->whenLoaded('payment')),
+            'payment' => $this->whenLoaded('payment', fn () => $this->payment ? new PaymentResource($this->payment) : null),
             'review' => $this->when(
                 $this->relationLoaded('review'),
                 fn () => $this->review ? new ReviewResource($this->review) : null,

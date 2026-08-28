@@ -14,6 +14,7 @@ class ProfessionalResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'user_id' => $this->user_id,
             'name' => $this->user?->name,
             'avatar' => $photoUrl,
             'profile_photo_url' => $photoUrl,
