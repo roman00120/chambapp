@@ -73,6 +73,11 @@ class MercadoPagoService
             'expires' => true,
             'expiration_date_from' => $expiration['from'],
             'expiration_date_to' => $expiration['to'],
+            'payer' => array_filter([
+                'name' => ($nameParts = preg_split('/\s+/', trim((string) ($payment->jobRequest?->client?->name ?? 'Cliente')), 2))[0] ?? 'Cliente',
+                'surname' => $nameParts[1] ?? 'Chambapp',
+                'email' => (string) ($payment->jobRequest?->client?->email ?? ''),
+            ]),
         ];
 
         $response = $this->postOnce($this->apiRequest($token), $this->apiUrl('/checkout/preferences'), $payload, 'checkout_preference');
