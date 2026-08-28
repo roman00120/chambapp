@@ -49,7 +49,7 @@ class JobRequestService
 
     public function createScheduled(User $client, array $data): JobRequest
     {
-        $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
+        $service = $this->safeService($data['service_id'] ?? null, isset($data['category_id']) ? (int) $data['category_id'] : null);
         if ($service && $service->professional && $service->professional->user_id === $client->getKey()) {
             throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
         }
@@ -58,7 +58,7 @@ class JobRequestService
             'client_id' => $client->getKey(),
             'professional_id' => $service?->professional_id,
             'service_id' => $service?->getKey(),
-            'category_id' => $data['category_id'],
+            'category_id' => $service?->category_id ?? $data['category_id'],
             'service_mode' => ServiceMode::from($data['service_mode'] ?? 'scheduled'),
             'title' => $data['title'],
             'description' => $data['description'],
@@ -81,10 +81,21 @@ class JobRequestService
         return $job;
     }
 
-    private function safeService(?int $serviceId, int $categoryId): ?Service
+    private function safeService(?int $serviceId, ?int $categoryId = null): ?Service
     {
-        return $serviceId
-            ? Service::query()->active()->where('category_id', $categoryId)->with(['professional.user'])->find($serviceId)
-            : null;
+        if (! $serviceId) {
+            return null;
+        }
+
+        $query = Service::query()->with(['professional.user']);
+        if ($categoryId !== null && $categoryId > 0) {
+            // If categoryId is given, prefer matching service directly or within category
+            $service = (clone $query)->where('category_id', $categoryId)->find($serviceId);
+            if ($service) {
+                return $service;
+            }
+        }
+
+        return $query->find($serviceId);
     }
 }
