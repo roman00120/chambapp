@@ -65,7 +65,7 @@ class JobRequestPolicy
         return $this->isClientParticipant($user, $jobRequest)
             && $jobRequest->status === JobStatus::AWAITING_PAYMENT
             && $jobRequest->agreed_price !== null
-            && $jobRequest->quotes()->where('status', QuoteStatus::ACCEPTED->value)->exists();
+            && ($jobRequest->service_id !== null || $jobRequest->quotes()->where('status', QuoteStatus::ACCEPTED->value)->exists());
     }
 
     public function pay(User $user, JobRequest $jobRequest): bool
@@ -106,8 +106,7 @@ class JobRequestPolicy
 
     private function isClientParticipant(User $user, JobRequest $jobRequest): bool
     {
-        return $user->canActAsClient()
-            && $jobRequest->client_id === $user->getKey()
+        return $jobRequest->client_id === $user->getKey()
             && $jobRequest->professional?->user_id !== $user->getKey();
     }
 

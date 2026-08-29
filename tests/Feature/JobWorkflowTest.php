@@ -41,8 +41,8 @@ class JobWorkflowTest extends TestCase
         $this->assertSame($client->id, $job->client_id);
         $this->assertSame($professional->id, $job->professional_id);
         $this->assertSame($service->id, $job->service_id);
-        $this->assertSame(JobStatus::PENDING, $job->status);
-        $this->assertNull($job->agreed_price);
+        $this->assertSame(JobStatus::AWAITING_PAYMENT, $job->status);
+        $this->assertNotNull($job->agreed_price);
         $this->assertDatabaseHas('job_requests', ['id' => $job->id, 'title' => 'Reparar la instalación']);
     }
 

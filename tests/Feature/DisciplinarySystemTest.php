@@ -36,7 +36,7 @@ class DisciplinarySystemTest extends TestCase
         $profile = ProfessionalProfile::factory()->create(['user_id' => $proUser->id]);
 
         $service = app(DisciplinaryService::class);
-        $file = UploadedFile::fake()->image('prueba.png');
+        $file = UploadedFile::fake()->create('prueba.png', 100, 'image/png');
 
         $report = $service->createReport($client, [
             'reported_id' => $proUser->id,

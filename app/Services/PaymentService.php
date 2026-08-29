@@ -476,7 +476,7 @@ class PaymentService
             if ($job->status !== JobStatus::AWAITING_PAYMENT) {
                 throw new DomainException('Este trabajo no está listo para pago.');
             }
-            if (! $job->quotes()->where('status', QuoteStatus::ACCEPTED->value)->exists()) {
+            if ($job->service_id === null && ! $job->quotes()->where('status', QuoteStatus::ACCEPTED->value)->exists()) {
                 throw new DomainException('Debe existir una cotización aceptada.');
             }
             if (! $job->professional?->isMercadoPagoConnected()) {

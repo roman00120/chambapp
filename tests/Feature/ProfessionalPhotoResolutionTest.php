@@ -21,7 +21,7 @@ class ProfessionalPhotoResolutionTest extends TestCase
     {
         Storage::fake('public');
 
-        $photo = UploadedFile::fake()->image('carlos.jpg', 400, 400);
+        $photo = UploadedFile::fake()->create('carlos.jpg', 100, 'image/jpeg');
         $path = $photo->store('profiles', 'public');
 
         $user = $this->createVerifiedProfessional([
@@ -111,7 +111,7 @@ class ProfessionalPhotoResolutionTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $photo = UploadedFile::fake()->image('david.jpg', 300, 300);
+        $photo = UploadedFile::fake()->create('david.jpg', 100, 'image/jpeg');
         $path = $photo->store('profiles', 'public');
 
         $profile = ProfessionalProfile::factory()->create([
@@ -148,7 +148,7 @@ class ProfessionalPhotoResolutionTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $oldPhoto = UploadedFile::fake()->image('old.jpg', 300, 300);
+        $oldPhoto = UploadedFile::fake()->create('old.jpg', 100, 'image/jpeg');
         $oldPath = $oldPhoto->store('profiles', 'public');
 
         $profile = ProfessionalProfile::factory()->create([
@@ -157,7 +157,7 @@ class ProfessionalPhotoResolutionTest extends TestCase
             'experience_years' => 5,
         ]);
 
-        $newPhoto = UploadedFile::fake()->image('new.jpg', 400, 400);
+        $newPhoto = UploadedFile::fake()->create('new.jpg', 100, 'image/jpeg');
 
         $service = app(ProfessionalProfileService::class);
         $updated = $service->update($user, $profile, [

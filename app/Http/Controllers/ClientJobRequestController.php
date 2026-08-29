@@ -50,6 +50,7 @@ class ClientJobRequestController extends Controller
             abort(403, 'No puedes solicitar tu propio servicio.');
         }
 
+        $money = app(\App\Services\PaymentCalculationService::class)->calculateJob((string) $service->price);
         $jobRequest = JobRequest::query()->create([
             'client_id' => $request->user()->getKey(),
             'professional_id' => $service->professional_id,
@@ -61,14 +62,24 @@ class ClientJobRequestController extends Controller
             'city' => $request->validated('city'),
             'state' => $request->validated('state'),
             'postal_code' => $request->validated('postal_code'),
-            'status' => 'pending',
+            'status' => 'awaiting_payment',
+            'agreed_price' => $money->baseAmount,
+            'economic_model_version' => $money->economicModelVersion,
+            'base_amount' => $money->baseAmount,
+            'client_service_fee_percent' => $money->clientServiceFeePercent,
+            'client_service_fee' => $money->clientServiceFee,
+            'professional_commission_percent' => $money->professionalCommissionPercent,
+            'professional_commission' => $money->professionalCommission,
+            'customer_total' => $money->customerTotal,
+            'platform_gross_fee' => $money->platformGrossFee,
+            'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
         ]);
         $service->professional?->user?->notify(new \App\Notifications\DirectServiceRequestedNotification(
             $jobRequest->loadMissing(['client', 'service'])
         ));
 
         return redirect()->route('job-requests.show', $jobRequest)
-            ->with('status', 'Solicitud enviada correctamente.');
+            ->with('status', 'Solicitud creada correctamente. Procede con el pago para formalizar.');
     }
 
     private function statusesFor(string $filter): array

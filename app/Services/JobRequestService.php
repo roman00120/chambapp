@@ -12,7 +12,10 @@ use Illuminate\Support\Facades\Storage;
 
 class JobRequestService
 {
-    public function __construct(private readonly OnDemandMatchingService $matching) {}
+    public function __construct(
+        private readonly OnDemandMatchingService $matching,
+        private readonly PaymentCalculationService $paymentCalculation,
+    ) {}
 
     public function createImmediate(User $client, array $data, array $photos = []): JobRequest
     {
@@ -54,6 +57,11 @@ class JobRequestService
             throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
         }
 
+        $money = null;
+        if ($service && $service->price !== null) {
+            $money = $this->paymentCalculation->calculateJob((string) $service->price);
+        }
+
         $job = JobRequest::query()->create([
             'client_id' => $client->getKey(),
             'professional_id' => $service?->professional_id,
@@ -71,7 +79,17 @@ class JobRequestService
             'requested_date' => $data['scheduled_for'],
             'scheduled_for' => $data['scheduled_for'],
             'scheduled_slot' => $data['scheduled_slot'],
-            'status' => JobStatus::PENDING,
+            'status' => $service ? JobStatus::AWAITING_PAYMENT : JobStatus::PENDING,
+            'agreed_price' => $money?->baseAmount,
+            'economic_model_version' => $money?->economicModelVersion,
+            'base_amount' => $money?->baseAmount,
+            'client_service_fee_percent' => $money?->clientServiceFeePercent,
+            'client_service_fee' => $money?->clientServiceFee,
+            'professional_commission_percent' => $money?->professionalCommissionPercent,
+            'professional_commission' => $money?->professionalCommission,
+            'customer_total' => $money?->customerTotal,
+            'platform_gross_fee' => $money?->platformGrossFee,
+            'professional_amount_before_external_costs' => $money?->professionalAmountBeforeExternalCosts,
         ]);
 
         if ($service?->professional?->user) {

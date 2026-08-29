@@ -25,15 +25,14 @@ class JobRequestResource extends JsonResource
         $routeJob = $request->route('job');
         $isDetailRequest = $routeJob instanceof JobRequest
             && $routeJob->getKey() === $this->getKey();
+        $isClient = $this->client_id === $user?->getKey() || ($user?->isClient() && ! ($this->professional?->user_id === $user?->getKey()));
+        $isProfessional = $this->professional?->user_id === $user?->getKey();
+        $isAdmin = $user?->isAdmin() === true;
         $canSeeCompletionCode = $isDetailRequest
-            && $user?->isClient() === true
-            && $this->client_id === $user->getKey()
+            && $this->client_id === $user?->getKey()
             && $this->status === JobStatus::AWAITING_CONFIRMATION
             && filled($this->completion_code)
             && ($this->completion_code_expires_at === null || ! $this->completion_code_expires_at->isPast());
-        $isClient = $this->client_id === $user?->getKey();
-        $isProfessional = $this->professional?->user_id === $user?->getKey();
-        $isAdmin = $user?->isAdmin() === true;
         $economicBreakdown = null;
         if ($this->economic_model_version === 'client_15_professional_15') {
             $economicBreakdown = [
