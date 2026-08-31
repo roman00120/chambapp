@@ -1,142 +1,183 @@
-# Chambapp
+# Chambapp 🛠️🇲🇽
 
-Chambapp es el marketplace que estoy construyendo para conectar clientes con profesionales verificados que pueden resolver trabajos del hogar, mantenimiento y servicios locales.
+Chambapp es un marketplace de servicios y oficios para México que conecta directamente a clientes con profesionales verificados para resolver trabajos de mantenimiento, hogar, reparaciones y servicios especializados.
 
-La idea es sencilla: una persona publica lo que necesita, encuentra ayuda disponible cerca, recibe una cotización clara y contrata dentro de la plataforma. El contacto y la dirección exacta se mantienen protegidos hasta que el pago queda aprobado.
+La plataforma opera bajo el modelo de **Marketplace Directo (Zero Radar)** con custodia de pagos mediante **Mercado Pago Checkout Pro** y comisión del 15%. La dirección exacta y los datos de contacto permanecen protegidos hasta que el pago queda formalmente aprobado.
 
-## Qué incluye
+---
 
-- Registro, inicio de sesión, verificación de correo y recuperación de contraseña.
-- Roles separados para clientes, profesionales y administración.
-- Perfil profesional, verificación, catálogo de servicios, categorías e imágenes.
-- Marketplace con búsqueda, filtros, favoritos, perfiles públicos y reseñas.
-- Solicitudes de trabajo, cotizaciones estructuradas y negociación controlada.
-- Pagos con Mercado Pago y comisión configurable del 15%.
-- Flujo de trabajo completo: pago, llegada, inicio, finalización, confirmación y disputas.
-- Matching on-demand por cercanía, categoría, disponibilidad y ubicación fresca.
-- Modo inmediato y modo programado con fecha y bloque horario.
-- Notificaciones internas, panel administrativo, moderación y auditoría.
-- PWA instalable, página offline, encabezados de seguridad y endpoint `/health`.
+## 🚀 Arquitectura del Producto
 
-## Flujo inmediato
+### 1. Modelo Marketplace Directo (Zero Radar)
+- **Catálogo Directo:** El cliente explora servicios publicados por profesionales, consulta perfiles públicos, reseñas y contrata directamente.
+- **Chamba Ahora (Inmediata):** Selección directa de categoría y profesional disponible, avanzando directamente al checkout sin subastas ni tiempos de espera.
+- **Programar:** Agenda citas seleccionando categoría, profesional/servicio, fecha y franja horaria (`08:00-11:00`, `11:00-14:00`, `14:00-17:00`, `17:00-20:00`).
+- **Sin Subastas ni Rondas:** Cero matching radial, cero temporizadores de radar y cero invitaciones masivas en las contrataciones nuevas.
 
-Cuando el cliente necesita ayuda ahora, Chambapp busca profesionales disponibles en radios progresivos de 5, 10, 15 y 25 km. El cálculo de distancia se realiza en backend con Haversine y se valida nuevamente al aceptar una invitación.
-
-El ciclo principal es:
-
+### 2. Flujo Operativo y Ciclo de Vida del Trabajo
 ```text
-searching → matched → awaiting_quote → awaiting_payment → paid
-→ on_the_way → arrived → in_progress → awaiting_confirmation → completed
+awaiting_payment ──(Pago Mercado Pago)──> paid ──(En camino)──> on_the_way
+  ──(Llegada)──> arrived ──(Iniciar)──> in_progress ──(Marcar terminado)──> awaiting_confirmation
+  ──(Código OTP 6 dígitos)──> completed ──(Liberación de fondos + Reseña)
 ```
 
-También se contemplan solicitudes expiradas, canceladas y disputadas. No uso WebSockets, Redis, tracking GPS continuo ni procesos daemon para este flujo: el cliente y el profesional consultan el estado mediante polling protegido por rate limit.
+---
 
-## Stack
+## 🛠️ Stack Tecnológico
 
-- Laravel 13
-- PHP 8.3+
-- MySQL
-- Blade
-- Bootstrap 5.3 y Bootstrap Icons
-- Vite
-- PHPUnit
-- Mercado Pago Checkout Pro
+- **Backend:** Laravel 13 (PHP 8.3+)
+- **Base de Datos:** MySQL 8
+- **Frontend Web:** Blade, Vanilla CSS / Bootstrap 5.3, Vite
+- **Mobile:** Flutter 3.24+ (Dart 3.x) con Riverpod, GoRouter, Dio
+- **Pagos:** Mercado Pago SDK / REST API con Webhook HMAC-SHA256
+- **Colas / Workers:** Driver `database` con cron worker en producción
+- **Suite de Pruebas:** PHPUnit 12 (Backend) + Flutter Test (Mobile)
 
-## Requisitos
+---
 
-- PHP 8.3 o superior con extensiones estándar de Laravel.
-- Composer.
-- Node.js y npm para compilar los assets.
-- MySQL.
+## 💻 Instalación y Configuración desde Cero (Nueva Computadora)
 
-## Instalación local
+### Requisitos Previos
+- **PHP:** 8.3 o superior con extensiones (`pdo_mysql`, `curl`, `mbstring`, `openssl`, `intl`).
+- **Composer:** 2.x
+- **Node.js & npm:** Node 20+ y npm 10+
+- **MySQL:** Servidor MySQL 8.0+
+- **Flutter SDK:** 3.24+ (para el cliente móvil)
+- **Android SDK / Studio:** Build Tools 34+ y JBR/JDK 17+.
+
+---
+
+### 1. ⚙️ Puesta en Marcha de Backend y Web
 
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/roman00120/chambapp.git
 cd chambapp
+
+# 2. Instalar dependencias PHP
 composer install
-copy .env.example .env
+
+# 3. Crear archivo de variables de entorno
+cp .env.example .env
+
+# 4. Generar clave de cifrado de la aplicación
 php artisan key:generate
-```
 
-Configuro en `.env` la conexión MySQL y, si voy a probar pagos, las credenciales de Mercado Pago. Después ejecuto:
+# 5. Configurar conexión MySQL en .env y correr migraciones
+php artisan migrate --seed
 
-```bash
-php artisan migrate
+# 6. Crear symlink para archivos públicos
+php artisan storage:link
+
+# 7. Instalar dependencias npm y compilar assets
 npm install
 npm run build
-php artisan storage:link
+
+# 8. Iniciar el servidor local
 php artisan serve
+# La aplicación queda disponible en: http://127.0.0.1:8000
 ```
 
-La aplicación queda disponible normalmente en `http://127.0.0.1:8000`.
+---
 
-En Windows, el inicio de sesión con Google requiere que PHP tenga certificados
-raíz configurados. El script local descarga el paquete oficial de curl.se la
-primera vez y arranca PHP con esa configuración:
-
-```powershell
-.\serve-local.cmd
-```
-
-Aunque el servidor escucha en la red local, Google OAuth debe probarse desde
-`http://127.0.0.1:8000`; Google no admite una IP privada como callback web.
-
-## Variables importantes
-
-```env
-CHAMBAPP_PLATFORM_FEE_PERCENT=15
-CHAMBAPP_PAYMENT_CURRENCY=MXN
-CHAMBAPP_IMMEDIATE_TIMEOUT=5
-CHAMBAPP_INVITATION_TIMEOUT=3
-CHAMBAPP_LOCATION_FRESHNESS=30
-```
-
-En producción uso `APP_DEBUG=false`, HTTPS, cookies seguras, una base MySQL privada y credenciales de Mercado Pago del entorno correspondiente. Nunca subo `.env`, tokens, contraseñas ni datos de tarjetas.
-
-## Calidad y pruebas
-
-Para ejecutar la suite:
+### 2. 📱 Puesta en Marcha de Mobile (Flutter)
 
 ```bash
+# 1. Clonar el repositorio móvil
+git clone https://github.com/roman00120/chambapp-mobile.git
+cd chambapp-mobile
+
+# 2. Instalar dependencias de Flutter
+flutter pub get
+
+# 3. Ejecutar en Emulador Android (conectando al backend local)
+flutter run \
+  --dart-define=APP_ENV=development \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+
+# 4. Ejecutar en Dispositivo Físico (LAN Wi-Fi)
+flutter run \
+  --dart-define=APP_ENV=development \
+  --dart-define=API_BASE_URL=http://TU_IP_LOCAL:8000/api/v1
+
+# 5. Ejecutar conectado al Backend de Producción
+flutter run \
+  --dart-define=APP_ENV=production \
+  --dart-define=API_BASE_URL=https://chambapp.com.mx/api/v1
+```
+
+---
+
+### 3. 🧪 Ejecución de Tests
+
+```bash
+# Backend (PHPUnit)
+cd chambapp
 php artisan test
-vendor/bin/pint --test
-npm run build
+# o: ./vendor/bin/phpunit
+
+# Mobile (Flutter Analyze & Tests)
+cd chambapp-mobile
+flutter analyze
+flutter test
 ```
 
-La suite actual cubre autenticación, permisos, marketplace, cotizaciones, privacidad, pagos, comisión histórica, workflow, moderación, matching por cercanía, disponibilidad, expiración, búsqueda nueva, polling y modo programado.
+---
 
-## API REST v1 y futura app móvil
+## 🔒 Variables de Entorno Clave (`.env`)
 
-Chambapp conserva la web Blade + Bootstrap + sesiones y agrega una interfaz REST versionada en `/api/v1`. Ambas interfaces usan los mismos modelos, Policies y servicios de dominio (`OnDemandMatchingService`, `JobWorkflowService`, pagos, cálculo de comisión, reseñas y protección de contacto); la web no depende de la API.
+| Variable | Descripción / Valor Recomendado |
+| :--- | :--- |
+| `APP_NAME` | `Chambapp` |
+| `APP_ENV` | `local` en desarrollo / `production` en producción |
+| `APP_DEBUG` | `true` en local / `false` obligatorio en producción |
+| `APP_URL` | `http://localhost:8000` (local) o `https://chambapp.com.mx` (prod) |
+| `QUEUE_CONNECTION` | `database` (para ejecución asíncrona con worker) |
+| `CHAMBAPP_PLATFORM_FEE_PERCENT` | `15` (Comisión del 15% para la plataforma) |
+| `CHAMBAPP_PAYMENT_CURRENCY` | `MXN` |
+| `MERCADOPAGO_ACCESS_TOKEN` | Credencial de acceso a la pasarela de pagos |
+| `MERCADOPAGO_WEBHOOK_SECRET` | Secreto HMAC para validar webhooks entrantes |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | Credenciales de Google OAuth |
 
-La autenticación móvil usa Laravel Sanctum mediante `Authorization: Bearer TOKEN`. Los endpoints principales permiten registro/login, revocación del token actual o de todos los dispositivos, categorías, servicios, perfiles públicos, favoritos, disponibilidad, solicitudes inmediatas y programadas, matching, invitaciones, cotizaciones, checkout, pagos, workflow, reseñas y notificaciones. Los roles públicos admitidos al registrar son exclusivamente `client` y `professional`.
+> [!CAUTION]
+> Nunca incluyas credenciales reales, tokens o contraseñas en Git. Utiliza siempre `.env.example` como plantilla.
 
-El contrato completo está en [docs/openapi.yaml](docs/openapi.yaml). Comprobación mínima:
+---
 
-```bash
-curl http://127.0.0.1:8000/api/v1/health
-curl http://127.0.0.1:8000/api/v1/categories
-```
+## 🔑 Compilación de APK Release Firmada
 
-Las colecciones grandes están paginadas y las fechas usan ISO 8601. Los importes se entregan como cadenas decimales. Teléfono, email, dirección y coordenadas exactas no se serializan públicamente; los participantes sólo obtienen la ubicación privada después de un pago aprobado. El dispositivo nunca decide monto, comisión, profesional ganador, estado financiero ni transiciones críticas.
+Para compilar la APK de producción oficial:
+1. Copia tu keystore privado a:
+   `~/.chambapp/signing/chambapp-upload.jks`
+2. Configura las variables de entorno de firma:
+   ```powershell
+   $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+   $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+   $env:CHAMBAPP_KEYSTORE_PATH = "$env:USERPROFILE\.chambapp\signing\chambapp-upload.jks"
+   $env:CHAMBAPP_KEY_ALIAS = "chambapp-upload"
+   $env:CHAMBAPP_STORE_PASSWORD = "<PASSWORD_DEL_KEYSTORE>"
+   $env:CHAMBAPP_KEY_PASSWORD = "<PASSWORD_DE_LA_LLAVE>"
+   ```
+3. Ejecuta la compilación:
+   ```bash
+   flutter build apk --release \
+     --dart-define=APP_ENV=production \
+     --dart-define=API_BASE_URL=https://chambapp.com.mx/api/v1 \
+     --dart-define=GOOGLE_SERVER_CLIENT_ID=750372864737-skigrd07vk2l3ivv50k2mrgp4u2taahb.apps.googleusercontent.com
+   ```
 
-Al suspender/bloquear una cuenta o restablecer su contraseña se revocan todos sus tokens API. Cerrar sesión en la web no revoca tokens móviles; `/api/v1/auth/logout` revoca el dispositivo actual y `/api/v1/auth/logout-all` revoca todos los dispositivos.
+---
 
-Para ejecutar únicamente las pruebas API:
+## 🌐 Arquitectura de Despliegue en Producción (Hostinger)
 
-```bash
-php artisan test tests/Feature/Api/V1
-```
+- **Estructura de Directorios:**
+  - Releases: `/home/u291776795/releases/chambapp-<commit>`
+  - DocumentRoot: `/home/u291776795/domains/chambapp.com.mx/public_html` con symlink hacia `build`
+  - Storage Compartido: `/home/u291776795/shared/chambapp/storage` (persiste fotos y avatars)
+- **Queue Worker:** `/home/u291776795/queue_worker.php` ejecutado por Cron cada minuto para procesar correos y notificaciones en segundo plano.
 
-Una futura app Flutter, React Native, Kotlin o Swift podrá guardar el token en almacenamiento seguro y consumir este contrato. Ninguna APK debe contener `APP_KEY`, credenciales de base de datos, secretos de Mercado Pago ni secretos de webhook.
+---
 
-## Documentación adicional
+## 📄 Licencia
 
-- [Despliegue](DEPLOYMENT.md)
-- [Operaciones](OPERATIONS.md)
-- [Smoke test](SMOKE_TEST.md)
-
-## Estado del proyecto
-
-Estoy desarrollando Chambapp por fases. La base funcional incluye el marketplace, la contratación protegida, los pagos, la administración y el flujo on-demand. Las siguientes mejoras deben mantener las mismas reglas de privacidad, seguridad, trazabilidad financiera y autorización por rol.
+Desarrollado por **Roman Velasco Moctezuma**. Todos los derechos reservados. Proyecto privado.
