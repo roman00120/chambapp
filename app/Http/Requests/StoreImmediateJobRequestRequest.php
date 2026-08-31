@@ -18,6 +18,7 @@ class StoreImmediateJobRequestRequest extends FormRequest
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'service_id' => ['nullable', 'integer', 'exists:services,id'],
+            'professional_id' => ['nullable', 'integer', 'exists:professional_profiles,id'],
             'title' => ['required', 'string', 'max:160'],
             'description' => ['required', 'string', 'min:10', 'max:1200'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

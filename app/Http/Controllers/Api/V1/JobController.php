@@ -82,12 +82,9 @@ class JobController extends Controller
         return new JobRequestResource($job);
     }
 
-    public function status(Request $request, JobRequest $job, OnDemandMatchingService $matching): JsonResponse
+    public function status(Request $request, JobRequest $job): JsonResponse
     {
         abort_unless($job->client_id === $request->user()->id || $job->professional?->user_id === $request->user()->id, 403);
-        if ($job->isImmediate() && $job->client_id === $request->user()->id) {
-            $job = $matching->refresh($job);
-        }
         $job->load('professional.user');
 
         return response()->json(['data' => [

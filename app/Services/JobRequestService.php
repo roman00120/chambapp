@@ -13,28 +13,43 @@ use Illuminate\Support\Facades\Storage;
 class JobRequestService
 {
     public function __construct(
-        private readonly OnDemandMatchingService $matching,
         private readonly PaymentCalculationService $paymentCalculation,
     ) {}
 
     public function createImmediate(User $client, array $data, array $photos = []): JobRequest
     {
-        $service = $this->safeService($data['service_id'] ?? null, (int) $data['category_id']);
-        if ($service && $service->professional && $service->professional->user_id === $client->getKey()) {
-            throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+        $service = $this->safeService($data['service_id'] ?? null, isset($data['category_id']) ? (int) $data['category_id'] : null);
+        $professionalId = $data['professional_id'] ?? null;
+        if ($service) {
+            $professionalId = $service->professional_id;
+            if ($service->professional && $service->professional->user_id === $client->getKey()) {
+                throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+            }
+        } elseif ($professionalId) {
+            $proProfile = \App\Models\ProfessionalProfile::find($professionalId);
+            if ($proProfile && $proProfile->user_id === $client->getKey()) {
+                throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+            }
         }
+
         $paths = collect($photos)
             ->filter(fn ($photo) => $photo instanceof UploadedFile)
             ->map(fn (UploadedFile $photo) => Storage::disk('local')->putFile('on-demand/'.$client->getKey(), $photo))
             ->values()
             ->all();
+
+        $money = null;
+        if ($service && $service->price !== null && (float) $service->price > 0) {
+            $money = $this->paymentCalculation->calculateJob((string) $service->price);
+        }
+
         $job = JobRequest::query()->create([
             'client_id' => $client->getKey(),
-            'professional_id' => null,
+            'professional_id' => $professionalId,
             'service_id' => $service?->getKey(),
-            'category_id' => $data['category_id'],
+            'category_id' => $service?->category_id ?? (isset($data['category_id']) ? (int) $data['category_id'] : null),
             'service_mode' => ServiceMode::IMMEDIATE,
-            'title' => $data['title'],
+            'title' => $data['title'] ?? ($service ? $service->title : 'Solicitud inmediata'),
             'description' => $data['description'],
             'address' => $data['address'] ?? null,
             'city' => $data['city'] ?? null,
@@ -43,11 +58,25 @@ class JobRequestService
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,
             'requested_date' => now(),
-            'status' => JobStatus::SEARCHING,
+            'status' => $money ? JobStatus::AWAITING_PAYMENT : JobStatus::PENDING,
+            'agreed_price' => $money?->baseAmount,
+            'economic_model_version' => $money?->economicModelVersion,
+            'base_amount' => $money?->baseAmount,
+            'client_service_fee_percent' => $money?->clientServiceFeePercent,
+            'client_service_fee' => $money?->clientServiceFee,
+            'professional_commission_percent' => $money?->professionalCommissionPercent,
+            'professional_commission' => $money?->professionalCommission,
+            'customer_total' => $money?->customerTotal,
+            'platform_gross_fee' => $money?->platformGrossFee,
+            'professional_amount_before_external_costs' => $money?->professionalAmountBeforeExternalCosts,
             'photo_paths' => $paths ?: null,
         ]);
 
-        return $this->matching->startSearch($job);
+        if ($service && $service->professional?->user) {
+            $service->professional->user->notify(new \App\Notifications\DirectServiceRequestedNotification($job));
+        }
+
+        return $job;
     }
 
     public function createScheduled(User $client, array $data): JobRequest

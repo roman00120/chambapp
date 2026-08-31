@@ -120,6 +120,16 @@ class MercadoPagoWebhookController extends Controller
 
         $payments->applyProviderPayment($payment, $providerData, (string) $request->input('id', $providerPaymentId), $safePayload);
 
+        if (config('queue.default') === 'database') {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('queue:work', [
+                    '--stop-when-empty' => true,
+                    '--max-time' => 10,
+                    '--tries' => 3,
+                ]);
+            } catch (Throwable) {}
+        }
+
         return response()->json(['received' => true]);
     }
 }

@@ -15,6 +15,7 @@ use App\Models\JobQuote;
 use App\Models\JobRequest;
 use App\Models\Payment;
 use App\Models\ProfessionalProfile;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -186,21 +187,33 @@ class JobApiTest extends TestCase
     public function test_client_can_create_immediate_job_and_poll_status(): void
     {
         $client = User::factory()->client()->create();
+        $professional = ProfessionalProfile::factory()->create();
         $category = Category::factory()->create();
+        $service = Service::factory()->create([
+            'category_id' => $category->id,
+            'professional_id' => $professional->id,
+            'price' => 500,
+        ]);
         Sanctum::actingAs($client);
 
         $response = $this->postJson('/api/v1/jobs/immediate', [
             'category_id' => $category->id,
+            'service_id' => $service->id,
             'description' => 'Tengo una fuga debajo del fregadero.',
             'latitude' => 20.67,
             'longitude' => -103.34,
             'address' => 'Dirección privada 123',
-        ])->assertCreated()->assertJsonPath('data.status', 'searching');
+        ])->assertCreated()->assertJsonPath('data.status', 'awaiting_payment');
 
         $jobId = $response->json('data.id');
         $this->getJson('/api/v1/jobs/'.$jobId.'/status')
             ->assertOk()
-            ->assertJsonPath('data.status', 'searching');
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.professional.id', $professional->id);
+
+        $this->assertDatabaseMissing('job_invitations', [
+            'job_request_id' => $jobId,
+        ]);
     }
 
     public function test_job_detail_prevents_idor_and_hides_exact_location_until_payment(): void

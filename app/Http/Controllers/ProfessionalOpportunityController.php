@@ -16,14 +16,9 @@ use Illuminate\View\View;
 
 class ProfessionalOpportunityController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $profile = $request->user()->professionalProfile;
-        $invitations = JobInvitation::query()->with(['jobRequest.category', 'jobRequest.service'])
-            ->where('professional_id', $profile?->getKey())->open()->where('expires_at', '>=', now())->latest('invited_at')->paginate(12);
-        JobInvitation::query()->whereIn('id', $invitations->pluck('id'))->where('status', InvitationStatus::PENDING->value)->update(['status' => InvitationStatus::VIEWED, 'viewed_at' => now()]);
-
-        return view('professional.opportunities', compact('invitations', 'profile'));
+        return redirect()->route('professional.jobs.index');
     }
 
     public function status(Request $request): JsonResponse
