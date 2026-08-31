@@ -27,7 +27,7 @@ class ServiceSearchService
                 'category:id,name,slug,icon',
                 'professional:id,user_id,bio,city,state,verification_status,profile_photo,average_rating,total_reviews,total_completed_jobs',
                 'professional.identityVerification:id,professional_id,status,expires_at',
-                'professional.user:id,name,email,status,role',
+                'professional.user:id,name,email,avatar_url,status,role',
                 'coverImage:id,service_id,path,alt_text,sort_order,is_cover',
             ]);
 

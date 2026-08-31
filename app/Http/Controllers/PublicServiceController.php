@@ -24,7 +24,7 @@ class PublicServiceController extends Controller
             ->with([
                 'category:id,name,slug,description',
                 'professional:id,user_id,bio,city,state,verification_status,profile_photo,average_rating,total_reviews,total_completed_jobs',
-                'professional.user:id,name,email,status,role',
+                'professional.user:id,name,email,avatar_url,status,role',
                 'professional.identityVerification:id,professional_id,status,expires_at',
                 'images:id,service_id,path,alt_text,sort_order,is_cover',
             ])
