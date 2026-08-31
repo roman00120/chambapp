@@ -64,10 +64,6 @@
                             <label class="form-check m-0"><input class="form-check-input" type="radio" name="cover_image_id" value="{{ $image->id }}" @checked($image->is_cover)> <span>Portada</span></label>
                             <button class="btn btn-sm btn-outline-danger" type="submit" form="delete-image-{{ $image->id }}" aria-label="Eliminar imagen de {{ $service->title }}">Eliminar</button>
                         </div>
-                        <form id="delete-image-{{ $image->id }}" method="POST" action="{{ route('professional.service-images.destroy', $image) }}" data-confirm-delete-form>
-                            @csrf
-                            @method('DELETE')
-                        </form>
                     </div>
                 @endforeach
             </div>
@@ -87,3 +83,12 @@
         <x-ui.button type="submit"><i class="bi bi-{{ $editing ? 'check2' : 'rocket-takeoff' }}" aria-hidden="true"></i> {{ $editing ? 'Guardar servicio' : 'Publicar servicio' }}</x-ui.button>
     </div>
 </form>
+
+@if ($editing && $service->images->isNotEmpty())
+    @foreach ($service->images as $image)
+        <form id="delete-image-{{ $image->id }}" method="POST" action="{{ route('professional.service-images.destroy', $image) }}" data-confirm-delete-form class="d-none">
+            @csrf
+            @method('DELETE')
+        </form>
+    @endforeach
+@endif
