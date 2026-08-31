@@ -55,6 +55,8 @@ class ClientJobRequestController extends Controller
             'client_id' => $request->user()->getKey(),
             'professional_id' => $service->professional_id,
             'service_id' => $service->getKey(),
+            'category_id' => $service->category_id,
+            'service_mode' => \App\Enums\ServiceMode::SCHEDULED,
             'title' => $request->validated('title'),
             'description' => $request->validated('description'),
             'requested_date' => $request->validated('requested_date'),
@@ -75,6 +77,10 @@ class ClientJobRequestController extends Controller
             'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
             'currency' => $money->currency,
         ]);
+
+        if ($service->professional?->user) {
+            $service->professional->user->notify(new \App\Notifications\DirectServiceRequestedNotification($jobRequest));
+        }
 
         return redirect()->route('client.payments.summary', $jobRequest)
             ->with('status', 'Contratación creada. Procede al pago para confirmar la chamba.');

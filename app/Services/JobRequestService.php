@@ -133,6 +133,10 @@ class JobRequestService
             'professional_amount_before_external_costs' => $money?->professionalAmountBeforeExternalCosts,
         ]);
 
+        if ($service && $service->professional?->user) {
+            $service->professional->user->notify(new \App\Notifications\DirectServiceRequestedNotification($job));
+        }
+
         return $job;
     }
 

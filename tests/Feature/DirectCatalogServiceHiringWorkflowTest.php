@@ -257,4 +257,60 @@ class DirectCatalogServiceHiringWorkflowTest extends TestCase
             return true;
         });
     }
+
+    public function test_web_direct_catalog_service_hiring_creates_job_awaiting_payment_and_redirects_to_payment_summary(): void
+    {
+        Notification::fake();
+
+        $client = User::factory()->client()->create(['name' => 'Cliente Web']);
+        $proUser = User::factory()->professional()->create(['name' => 'Pro Web']);
+        $proProfile = ProfessionalProfile::factory()->for($proUser)->create([
+            'is_available' => true,
+            'availability_status' => AvailabilityStatus::AVAILABLE,
+            'verification_status' => VerificationStatus::VERIFIED,
+            'mercadopago_user_id' => 'mp-web-123',
+            'mercadopago_access_token' => 'token-web-123',
+            'mercadopago_token_expires_at' => now()->addMonth(),
+        ]);
+        $proProfile->identityVerification()->create(['status' => IdentityVerificationStatus::VERIFIED]);
+
+        $category = Category::factory()->create(['name' => 'Electricidad', 'is_active' => true]);
+        $service = Service::factory()->create([
+            'professional_id' => $proProfile->id,
+            'category_id' => $category->id,
+            'title' => 'Instalación de Lámparas',
+            'price' => '500.00',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($client);
+
+        $response = $this->post(route('job-requests.store', $service), [
+            'title' => 'Instalación de Lámparas',
+            'description' => 'Instalación de 3 lámparas LED en sala y comedor.',
+            'requested_date' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            'address' => 'Calle Morelos 789',
+            'city' => 'Zapopan',
+            'state' => 'Jalisco',
+            'postal_code' => '45000',
+        ]);
+
+        $job = JobRequest::query()->where('client_id', $client->id)->first();
+        $this->assertNotNull($job);
+        $this->assertSame($service->id, $job->service_id);
+        $this->assertSame($proProfile->id, $job->professional_id);
+        $this->assertSame(JobStatus::AWAITING_PAYMENT, $job->status);
+        $this->assertSame('500.00', (string) $job->base_amount);
+        $this->assertSame('575.00', (string) $job->customer_total);
+
+        // Sin JobQuote ni Radar
+        $this->assertDatabaseCount('job_quotes', 0);
+        $this->assertDatabaseCount('job_invitations', 0);
+
+        // Redirige directamente al resumen de pago
+        $response->assertRedirect(route('client.payments.summary', $job));
+
+        // Profesional notificado
+        Notification::assertSentTo($proUser, DirectServiceRequestedNotification::class);
+    }
 }
