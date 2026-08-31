@@ -68,6 +68,10 @@ Route::get('/compras/pendiente', fn () => app(CommerceController::class)->purcha
 Route::get('/compras/error', fn () => app(CommerceController::class)->purchaseReturn('error'))->name('commerce.return.error');
 Route::get('/terminos', [LegalController::class, 'terms'])->name('legal.terms');
 Route::get('/privacidad', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/cookies', [LegalController::class, 'cookies'])->name('legal.cookies');
+Route::get('/cancelaciones', [LegalController::class, 'cancellations'])->name('legal.cancellations');
+Route::get('/para-profesionales', [LegalController::class, 'professionals'])->name('legal.professionals');
+Route::get('/contacto', [LegalController::class, 'contact'])->name('legal.contact');
 Route::view('/verificacion-identidad/regreso', 'professional.identity-verification.mobile-return')
     ->name('identity-verification.mobile-return');
 Route::get('/sitemap.xml', fn () => response()->view('seo.sitemap', [], 200, ['Content-Type' => 'application/xml']))->name('sitemap');

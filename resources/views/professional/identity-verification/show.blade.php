@@ -38,7 +38,7 @@
                     <li>Chambapp no almacena imágenes del documento, selfies, videos ni biometría cruda.</li>
                     <li>Este proceso no equivale a validar el documento contra una base gubernamental específica.</li>
                 </ul>
-                <p>Consulta el <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener">Aviso de privacidad</a>. El texto de consentimiento permanece sujeto a revisión jurídica.</p>
+                <p>Para mayor información sobre el tratamiento de tus datos personales, consulta nuestro <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener">Aviso de Privacidad</a>.</p>
 
                 @if ($mobileTransferUrl)
                     <section class="identity-mobile-transfer" data-identity-transfer data-transfer-url="{{ $mobileTransferUrl }}">
