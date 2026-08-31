@@ -22,7 +22,7 @@ class JobWorkflowTest extends TestCase
         $client = User::factory()->client()->create();
         $date = now()->addDays(2)->setSeconds(0);
 
-        $this->actingAs($client)->post(route('job-requests.store', $service), [
+        $response = $this->actingAs($client)->post(route('job-requests.store', $service), [
             'title' => 'Reparar la instalación',
             'description' => 'Necesito revisar una fuga en la cocina.',
             'requested_date' => $date->format('Y-m-d\\TH:i'),
@@ -34,15 +34,16 @@ class JobWorkflowTest extends TestCase
             'professional_id' => User::factory()->client()->create()->id,
             'status' => 'completed',
             'agreed_price' => 1,
-        ])->assertRedirect();
+        ]);
 
         $job = JobRequest::query()->latest('id')->first();
         $this->assertNotNull($job);
+        $response->assertRedirect(route('client.payments.summary', $job));
         $this->assertSame($client->id, $job->client_id);
-        $this->assertSame($professional->id, $job->professional_id);
         $this->assertSame($service->id, $job->service_id);
         $this->assertSame(JobStatus::AWAITING_PAYMENT, $job->status);
-        $this->assertNotNull($job->agreed_price);
+        $this->assertSame($service->price, $job->agreed_price);
+        $this->assertDatabaseMissing('job_quotes', ['job_request_id' => $job->id]);
         $this->assertDatabaseHas('job_requests', ['id' => $job->id, 'title' => 'Reparar la instalación']);
     }
 

@@ -21,6 +21,55 @@ class JobWorkflowService
         private readonly ProfessionalIdentityVerificationService $identityVerification,
     ) {}
 
+    public function acceptDirectJob(JobRequest $jobRequest, User $professional): JobRequest
+    {
+        $this->identityVerification->ensureProfessionalCanAcceptJobs($jobRequest->professional);
+
+        return DB::transaction(function () use ($jobRequest, $professional): JobRequest {
+            $job = $this->locked($jobRequest);
+            $job->loadMissing(['service', 'professional.user', 'client']);
+
+            if ($job->professional?->user_id !== $professional->getKey()) {
+                throw new DomainException('No tienes permiso para aceptar esta solicitud.');
+            }
+
+            if ($job->status !== JobStatus::PENDING) {
+                throw new DomainException('Esta solicitud ya no está pendiente de aceptación.');
+            }
+
+            if (! $job->service_id || ! $job->service) {
+                throw new DomainException('Esta no es una contratación directa de servicio.');
+            }
+
+            $price = $job->service->price;
+            if ($price === null || (float) $price <= 0) {
+                throw new DomainException('El servicio seleccionado no tiene un precio válido configurado.');
+            }
+
+            $money = $this->paymentCalculation->calculateJob((string) $price);
+
+            $job->forceFill([
+                'status' => JobStatus::AWAITING_PAYMENT,
+                'accepted_at' => now(),
+                'agreed_price' => $money->baseAmount,
+                'economic_model_version' => $money->economicModelVersion,
+                'base_amount' => $money->baseAmount,
+                'client_service_fee_percent' => $money->clientServiceFeePercent,
+                'client_service_fee' => $money->clientServiceFee,
+                'professional_commission_percent' => $money->professionalCommissionPercent,
+                'professional_commission' => $money->professionalCommission,
+                'customer_total' => $money->customerTotal,
+                'platform_gross_fee' => $money->platformGrossFee,
+                'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
+            ])->save();
+
+            $freshJob = $job->fresh(['service', 'professional.user', 'client']);
+            $freshJob->client?->notify(new \App\Notifications\DirectServiceAcceptedNotification($freshJob));
+
+            return $freshJob;
+        });
+    }
+
     public function reject(JobRequest $jobRequest): JobRequest
     {
         $job = $this->transition($jobRequest, JobStatus::PENDING, JobStatus::REJECTED, ['cancelled_at' => null]);

@@ -42,6 +42,13 @@ class JobRequestPolicy
             && $jobRequest->status === JobStatus::PENDING;
     }
 
+    public function acceptDirect(User $user, JobRequest $jobRequest): bool
+    {
+        return $this->isProfessionalParticipant($user, $jobRequest)
+            && $jobRequest->status === JobStatus::PENDING
+            && $jobRequest->service_id !== null;
+    }
+
     public function start(User $user, JobRequest $jobRequest): bool
     {
         return $this->isProfessionalParticipant($user, $jobRequest)
@@ -64,7 +71,6 @@ class JobRequestPolicy
     {
         return $this->isClientParticipant($user, $jobRequest)
             && $jobRequest->status === JobStatus::AWAITING_PAYMENT
-            && $jobRequest->agreed_price !== null
             && ($jobRequest->service_id !== null || $jobRequest->quotes()->where('status', QuoteStatus::ACCEPTED->value)->exists());
     }
 

@@ -76,6 +76,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/job-invitations', [ProfessionalController::class, 'invitations']);
             Route::post('/job-invitations/{invitation}/accept', [ProfessionalController::class, 'acceptInvitation'])->middleware('throttle:api-accept');
             Route::post('/job-invitations/{invitation}/decline', [ProfessionalController::class, 'declineInvitation'])->middleware('throttle:api-accept');
+            Route::post('/jobs/{job}/accept', [ProfessionalController::class, 'acceptJob'])->middleware('throttle:api-accept');
+            Route::post('/jobs/{job}/reject', [ProfessionalController::class, 'rejectJob'])->middleware('throttle:api-accept');
             Route::post('/jobs/{job}/quotes', [ProfessionalController::class, 'createQuote'])->middleware('throttle:quotes');
         });
 

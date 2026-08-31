@@ -52,9 +52,50 @@ class JobRequestService
 
     public function createScheduled(User $client, array $data): JobRequest
     {
-        $service = $this->safeService($data['service_id'] ?? null, isset($data['category_id']) ? (int) $data['category_id'] : null);
-        if ($service && $service->professional && $service->professional->user_id === $client->getKey()) {
-            throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+        $service = null;
+        $professionalId = null;
+        $categoryId = isset($data['category_id']) ? (int) $data['category_id'] : null;
+
+        if (! empty($data['service_id'])) {
+            $service = Service::query()
+                ->with(['professional.user', 'category'])
+                ->find((int) $data['service_id']);
+
+            if ($service) {
+                $professionalId = $service->professional_id;
+                $categoryId = $service->category_id;
+
+                if ($service->professional && $service->professional->user_id === $client->getKey()) {
+                    throw new \DomainException('No puedes solicitar un servicio a tu propio perfil profesional.');
+                }
+            }
+        }
+
+        $status = JobStatus::PENDING;
+        $agreedPrice = null;
+        $economicModelVersion = null;
+        $baseAmount = null;
+        $clientFeePercent = null;
+        $clientFee = null;
+        $proCommissionPercent = null;
+        $proCommission = null;
+        $customerTotal = null;
+        $platformGrossFee = null;
+        $proAmountBeforeCosts = null;
+
+        if ($service && $service->price !== null && (float) $service->price > 0) {
+            $status = JobStatus::AWAITING_PAYMENT;
+            $money = app(\App\Services\PaymentCalculationService::class)->calculateJob((string) $service->price);
+            $agreedPrice = $money->baseAmount;
+            $economicModelVersion = $money->economicModelVersion;
+            $baseAmount = $money->baseAmount;
+            $clientFeePercent = $money->clientServiceFeePercent;
+            $clientFee = $money->clientServiceFee;
+            $proCommissionPercent = $money->professionalCommissionPercent;
+            $proCommission = $money->professionalCommission;
+            $customerTotal = $money->customerTotal;
+            $platformGrossFee = $money->platformGrossFee;
+            $proAmountBeforeCosts = $money->professionalAmountBeforeExternalCosts;
         }
 
         $money = null;
@@ -64,9 +105,9 @@ class JobRequestService
 
         $job = JobRequest::query()->create([
             'client_id' => $client->getKey(),
-            'professional_id' => $service?->professional_id,
+            'professional_id' => $professionalId,
             'service_id' => $service?->getKey(),
-            'category_id' => $service?->category_id ?? $data['category_id'],
+            'category_id' => $categoryId,
             'service_mode' => ServiceMode::from($data['service_mode'] ?? 'scheduled'),
             'title' => $data['title'],
             'description' => $data['description'],
@@ -91,10 +132,6 @@ class JobRequestService
             'platform_gross_fee' => $money?->platformGrossFee,
             'professional_amount_before_external_costs' => $money?->professionalAmountBeforeExternalCosts,
         ]);
-
-        if ($service?->professional?->user) {
-            $service->professional->user->notify(new \App\Notifications\DirectServiceRequestedNotification($job->loadMissing(['client', 'service'])));
-        }
 
         return $job;
     }

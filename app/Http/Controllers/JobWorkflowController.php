@@ -24,6 +24,19 @@ class JobWorkflowController extends Controller
         return back()->with('status', 'Solicitud rechazada.');
     }
 
+    public function acceptDirect(Request $request, JobRequest $jobRequest, JobWorkflowService $workflow): RedirectResponse
+    {
+        $this->authorize('acceptDirect', $jobRequest);
+
+        try {
+            $workflow->acceptDirectJob($jobRequest, $request->user());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['job' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'Solicitud aceptada correctamente. Esperando pago del cliente.');
+    }
+
     public function start(Request $request, JobRequest $jobRequest, JobWorkflowService $workflow): RedirectResponse
     {
         $this->authorize('start', $jobRequest);

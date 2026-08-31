@@ -164,6 +164,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('/trabajos/{jobRequest}', [JobRequestController::class, 'show'])->name('job-requests.show');
+    Route::post('/trabajos/{jobRequest}/aceptar', [JobWorkflowController::class, 'acceptDirect'])->middleware('throttle:workflow')->name('job-requests.accept-direct');
     Route::post('/trabajos/{jobRequest}/rechazar', [JobWorkflowController::class, 'reject'])->middleware('throttle:workflow')->name('job-requests.reject');
     Route::post('/trabajos/{jobRequest}/iniciar', [JobWorkflowController::class, 'start'])->middleware('throttle:workflow')->name('job-requests.start');
     Route::post('/trabajos/{jobRequest}/en-camino', [JobWorkflowController::class, 'onTheWay'])->middleware('throttle:workflow')->name('job-requests.on-the-way');

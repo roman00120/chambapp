@@ -235,6 +235,36 @@ class ProfessionalController extends Controller
         ], 201);
     }
 
+    public function acceptJob(Request $request, JobRequest $job, JobWorkflowService $workflow): JsonResponse
+    {
+        $this->authorize('acceptDirect', $job);
+        try {
+            $updatedJob = $workflow->acceptDirectJob($job, $request->user());
+        } catch (DomainException $exception) {
+            return $this->domainError($exception, 'JOB_UNAVAILABLE');
+        }
+
+        return response()->json([
+            'data' => new JobRequestResource($updatedJob->load(['category', 'service.category', 'service.coverImage', 'professional.user', 'payment'])),
+            'message' => 'Solicitud aceptada correctamente.',
+        ]);
+    }
+
+    public function rejectJob(Request $request, JobRequest $job, JobWorkflowService $workflow): JsonResponse
+    {
+        $this->authorize('reject', $job);
+        try {
+            $updatedJob = $workflow->reject($job);
+        } catch (DomainException $exception) {
+            return $this->domainError($exception, 'JOB_UNAVAILABLE');
+        }
+
+        return response()->json([
+            'data' => new JobRequestResource($updatedJob->load(['category', 'service.category', 'service.coverImage', 'professional.user', 'payment'])),
+            'message' => 'Solicitud rechazada.',
+        ]);
+    }
+
     private function domainError(DomainException $exception, string $code): JsonResponse
     {
         if ($exception instanceof IdentityVerificationRequiredException) {

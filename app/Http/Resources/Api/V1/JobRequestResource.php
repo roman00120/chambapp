@@ -34,28 +34,33 @@ class JobRequestResource extends JsonResource
             && filled($this->completion_code)
             && ($this->completion_code_expires_at === null || ! $this->completion_code_expires_at->isPast());
         $economicBreakdown = null;
-        if ($this->economic_model_version === 'client_15_professional_15') {
+        $base = $this->base_amount ?? $this->agreed_price ?? $this->service?->price;
+        if ($base !== null && (float) $base > 0) {
+            $money = ($this->economic_model_version === 'client_15_professional_15' && $this->base_amount !== null)
+                ? app(\App\Services\PaymentCalculationService::class)->forJob($this->resource)
+                : app(\App\Services\PaymentCalculationService::class)->calculateJob((string) $base);
+
             $economicBreakdown = [
-                'economic_model_version' => $this->economic_model_version,
-                'base_amount' => (string) $this->base_amount,
-                'currency' => config('chambapp.payments.currency'),
+                'economic_model_version' => $money->economicModelVersion,
+                'base_amount' => (string) $money->baseAmount,
+                'currency' => (string) $money->currency,
             ];
             if ($isClient || $isAdmin) {
                 $economicBreakdown += [
-                    'client_service_fee_percent' => (string) $this->client_service_fee_percent,
-                    'client_service_fee' => (string) $this->client_service_fee,
-                    'customer_total' => (string) $this->customer_total,
+                    'client_service_fee_percent' => (string) $money->clientServiceFeePercent,
+                    'client_service_fee' => (string) $money->clientServiceFee,
+                    'customer_total' => (string) $money->customerTotal,
                 ];
             }
             if ($isProfessional || $isAdmin) {
                 $economicBreakdown += [
-                    'professional_commission_percent' => (string) $this->professional_commission_percent,
-                    'professional_commission' => (string) $this->professional_commission,
-                    'professional_amount_before_external_costs' => (string) $this->professional_amount_before_external_costs,
+                    'professional_commission_percent' => (string) $money->professionalCommissionPercent,
+                    'professional_commission' => (string) $money->professionalCommission,
+                    'professional_amount_before_external_costs' => (string) $money->professionalAmountBeforeExternalCosts,
                 ];
             }
             if ($isAdmin) {
-                $economicBreakdown['platform_gross_fee'] = (string) $this->platform_gross_fee;
+                $economicBreakdown['platform_gross_fee'] = (string) $money->platformGrossFee;
             }
         }
 
@@ -79,7 +84,7 @@ class JobRequestResource extends JsonResource
             'longitude' => $this->when($private, $this->longitude),
             'scheduled_for' => $this->scheduled_for?->toIso8601String(),
             'scheduled_slot' => $this->scheduled_slot,
-            'agreed_price' => $this->agreed_price !== null ? (string) $this->agreed_price : null,
+            'agreed_price' => $this->agreed_price !== null ? (string) $this->agreed_price : ($this->service?->price !== null ? (string) $this->service->price : null),
             'currency' => config('chambapp.payments.currency'),
             'economic_breakdown' => $economicBreakdown,
             'search_round' => $this->search_round,

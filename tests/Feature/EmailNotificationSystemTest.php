@@ -64,7 +64,10 @@ class EmailNotificationSystemTest extends TestCase
 
         $client = User::factory()->create(['role' => UserRole::CLIENT]);
         $proUser = User::factory()->create(['role' => UserRole::PROFESSIONAL]);
-        $proProfile = ProfessionalProfile::factory()->create(['user_id' => $proUser->id]);
+        $proProfile = ProfessionalProfile::factory()->create([
+            'user_id' => $proUser->id,
+            'mercadopago_user_id' => 'mp_123456',
+        ]);
         $otherProUser = User::factory()->create(['role' => UserRole::PROFESSIONAL]);
         $otherProProfile = ProfessionalProfile::factory()->create(['user_id' => $otherProUser->id]);
 
@@ -73,6 +76,7 @@ class EmailNotificationSystemTest extends TestCase
             'professional_id' => $proProfile->id,
             'category_id' => $category->id,
             'title' => 'Mantenimiento PC',
+            'price' => '200.00',
             'is_active' => true,
         ]);
 
@@ -90,13 +94,27 @@ class EmailNotificationSystemTest extends TestCase
             'scheduled_slot' => '10:00 - 12:00',
         ]);
 
-        Notification::assertSentTo($proUser, DirectServiceRequestedNotification::class, function ($notification) use ($proUser) {
+        $this->assertSame(\App\Enums\JobStatus::AWAITING_PAYMENT, $job->status);
+
+        // Simulamos aprobación de pago
+        $payment = \App\Models\Payment::factory()->create([
+            'job_request_id' => $job->id,
+            'client_id' => $client->id,
+            'professional_id' => $proProfile->id,
+            'kind' => \App\Enums\PaymentKind::JOB,
+            'status' => \App\Enums\PaymentStatus::APPROVED,
+            'gross_amount' => '230.00',
+        ]);
+
+        $proUser->notify(new \App\Notifications\PaymentConfirmedProfessionalNotification($job, $payment));
+
+        Notification::assertSentTo($proUser, \App\Notifications\PaymentConfirmedProfessionalNotification::class, function ($notification) use ($proUser) {
             $mail = $notification->toMail($proUser);
-            $this->assertStringContainsString('Nueva solicitud de servicio en Chambapp', $mail->subject);
+            $this->assertStringContainsString('El cliente realizó el pago', $mail->subject);
             return true;
         });
 
-        Notification::assertNotSentTo($otherProUser, DirectServiceRequestedNotification::class);
+        Notification::assertNotSentTo($otherProUser, \App\Notifications\PaymentConfirmedProfessionalNotification::class);
     }
 
     public function test_new_quote_sends_quote_received_notification_with_15_percent_breakdown(): void

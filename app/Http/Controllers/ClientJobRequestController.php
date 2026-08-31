@@ -62,24 +62,22 @@ class ClientJobRequestController extends Controller
             'city' => $request->validated('city'),
             'state' => $request->validated('state'),
             'postal_code' => $request->validated('postal_code'),
-            'status' => 'awaiting_payment',
+            'status' => \App\Enums\JobStatus::AWAITING_PAYMENT->value,
             'agreed_price' => $money->baseAmount,
             'economic_model_version' => $money->economicModelVersion,
             'base_amount' => $money->baseAmount,
             'client_service_fee_percent' => $money->clientServiceFeePercent,
             'client_service_fee' => $money->clientServiceFee,
+            'customer_total' => $money->customerTotal,
             'professional_commission_percent' => $money->professionalCommissionPercent,
             'professional_commission' => $money->professionalCommission,
-            'customer_total' => $money->customerTotal,
             'platform_gross_fee' => $money->platformGrossFee,
             'professional_amount_before_external_costs' => $money->professionalAmountBeforeExternalCosts,
+            'currency' => $money->currency,
         ]);
-        $service->professional?->user?->notify(new \App\Notifications\DirectServiceRequestedNotification(
-            $jobRequest->loadMissing(['client', 'service'])
-        ));
 
-        return redirect()->route('job-requests.show', $jobRequest)
-            ->with('status', 'Solicitud creada correctamente. Procede con el pago para formalizar.');
+        return redirect()->route('client.payments.summary', $jobRequest)
+            ->with('status', 'Contratación creada. Procede al pago para confirmar la chamba.');
     }
 
     private function statusesFor(string $filter): array

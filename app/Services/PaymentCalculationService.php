@@ -86,6 +86,14 @@ class PaymentCalculationService
             );
         }
 
+        // Catalog-direct hire: service.price is authoritative, no quote involved.
+        if ($job->service_id !== null && ! $job->quotes()->where('status', 'accepted')->exists()) {
+            $base = $job->base_amount ?? $job->agreed_price ?? $job->service?->price;
+            if ($base !== null && (float) $base > 0) {
+                return $this->calculateJob((string) $base);
+            }
+        }
+
         return $this->calculate((string) $job->agreed_price);
     }
 

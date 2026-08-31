@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Resumen de pago | Chambapp')
+@section('title', 'Confirmar contratación | Chambapp')
 
 @section('content')
 <section class="payment-page"><div class="container">
-    <div class="page-heading"><div><p class="eyebrow mb-2"><i class="bi bi-shield-lock" aria-hidden="true"></i> Pago seguro</p><h1 class="page-title">Resumen de pago</h1><p class="section-copy mb-0">Serás redirigido a Mercado Pago para completar el pago. Chambapp no recibe datos de tarjeta.</p></div></div>
+    <div class="page-heading"><div><p class="eyebrow mb-2"><i class="bi bi-shield-lock" aria-hidden="true"></i> Pago seguro</p><h1 class="page-title">Confirmar contratación</h1><p class="section-copy mb-0">Serás redirigido a Mercado Pago para completar el pago. Chambapp no recibe datos de tarjeta.</p></div></div>
     <div class="row g-4 mt-1">
         <div class="col-12 col-lg-7"><x-ui.card padding="lg">
             <p class="eyebrow mb-2">Servicio</p><h2 class="h4 mb-1">{{ $jobRequest->service?->title ?? $jobRequest->title }}</h2><p class="text-muted mb-4">Profesional: <strong>{{ $jobRequest->professional?->user?->name }}</strong></p>
@@ -18,7 +18,7 @@
             @if ($hasApprovedPayment)
                 <x-ui.alert class="mt-4" variant="success">Pago aprobado.</x-ui.alert>
             @elseif ($canCheckout)
-                <form class="mt-4" method="POST" action="{{ route('client.payments.checkout', $jobRequest) }}" data-payment-form data-payment-message="Preparando pago...">@csrf<x-ui.button class="w-100" size="lg" type="submit"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Continuar con Mercado Pago</x-ui.button></form>
+                <form class="mt-4" method="POST" action="{{ route('client.payments.checkout', $jobRequest) }}" data-payment-form data-payment-message="Preparando pago...">@csrf<x-ui.button class="w-100" size="lg" type="submit"><i class="bi bi-shield-check" aria-hidden="true"></i> Pagar Chamba</x-ui.button></form>
                 <p class="small text-muted mt-3 mb-0">El cargo mostrado es un cargo de servicio de Chambapp, no un impuesto.</p>
             @else
                 <x-ui.alert class="mt-4" variant="warning">El profesional debe conectar Mercado Pago para habilitar este pago.</x-ui.alert>

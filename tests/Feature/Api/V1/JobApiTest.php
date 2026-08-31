@@ -640,6 +640,93 @@ class JobApiTest extends TestCase
             ->assertJsonPath('data.payment.base_amount', '200.00')
             ->assertJsonPath('data.payment.client_service_fee', '30.00')
             ->assertJsonPath('data.payment.customer_total', '230.00');
+
+        $calc = app(\App\Services\PaymentCalculationService::class)->forJob($job);
+        $this->assertSame('200.00', $calc->baseAmount);
+        $this->assertSame('30.00', $calc->clientServiceFee);
+        $this->assertSame('230.00', $calc->customerTotal);
+        $this->assertSame('60.00', $calc->platformGrossFee);
+        $this->assertSame('170.00', $calc->professionalAmountBeforeExternalCosts);
+    }
+
+    public function test_service_with_price_50_creates_job_with_exact_15_percent_breakdown_and_checkout_57_50(): void
+    {
+        $proUser = User::factory()->professional()->create();
+        $proProfile = ProfessionalProfile::factory()->verifiedIdentity()->create([
+            'user_id' => $proUser->id,
+            'is_available' => true,
+            'availability_status' => AvailabilityStatus::AVAILABLE,
+            'mercadopago_user_id' => '79786415',
+            'mercadopago_access_token' => 'TEST-seller-token',
+            'mercadopago_refresh_token' => 'TEST-seller-refresh',
+            'mercadopago_token_expires_at' => now()->addMonths(5),
+        ]);
+        $client = User::factory()->client()->create();
+        $category = Category::factory()->create(['name' => 'Informática (mantenimiento PC)', 'is_active' => true]);
+        $service = \App\Models\Service::factory()->create([
+            'professional_id' => $proProfile->id,
+            'category_id' => $category->id,
+            'title' => 'Informática (mantenimiento PC)',
+            'price' => '50.00',
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($client);
+        $payload = [
+            'category_id' => $category->id,
+            'service_id' => $service->id,
+            'title' => 'Informática (mantenimiento PC)',
+            'description' => 'Servicio directo de mantenimiento de PC desde el catálogo.',
+            'scheduled_for' => now()->addDays(1)->format('Y-m-d H:i:s'),
+            'scheduled_slot' => '11:00-14:00',
+            'address' => 'Av. Hidalgo 456',
+            'city' => 'Guadalajara',
+            'state' => 'Jalisco',
+            'postal_code' => '44100',
+        ];
+
+        // 1. Cliente contrata servicio de $50
+        $storeResponse = $this->postJson('/api/v1/jobs/scheduled', $payload)->assertCreated();
+        $jobId = $storeResponse->json('data.id');
+
+        $storeResponse->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.agreed_price', '50.00')
+            ->assertJsonPath('data.service.price', '50.00')
+            ->assertJsonPath('data.economic_breakdown.base_amount', '50.00')
+            ->assertJsonPath('data.economic_breakdown.client_service_fee', '7.50')
+            ->assertJsonPath('data.economic_breakdown.customer_total', '57.50');
+
+        // 2. GET /api/v1/jobs/{id} devuelve exactamente los mismos valores
+        $showResponse = $this->getJson("/api/v1/jobs/{$jobId}")->assertOk();
+        $showResponse->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.agreed_price', '50.00')
+            ->assertJsonPath('data.service.price', '50.00')
+            ->assertJsonPath('data.economic_breakdown.base_amount', '50.00')
+            ->assertJsonPath('data.economic_breakdown.client_service_fee', '7.50')
+            ->assertJsonPath('data.economic_breakdown.customer_total', '57.50');
+
+        // 3. Checkout genera el pago por $57.50
+        Http::fake([
+            'https://api.mercadopago.com/checkout/preferences*' => Http::response([
+                'id' => 'pref-test-50',
+                'init_point' => 'https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-test-50',
+                'sandbox_init_point' => 'https://sandbox.mercadopago.com.mx/checkout/v1/redirect?pref_id=pref-test-50',
+            ], 201),
+        ]);
+
+        $checkoutResponse = $this->postJson("/api/v1/jobs/{$jobId}/checkout")->assertOk();
+        $checkoutResponse->assertJsonPath('data.payment.customer_total', '57.50')
+            ->assertJsonPath('data.payment.base_amount', '50.00')
+            ->assertJsonPath('data.payment.client_service_fee', '7.50')
+            ->assertJsonPath('data.payment.client_service_fee_percent', '15.00');
+
+        $payment = Payment::query()->where('job_request_id', $jobId)->first();
+        $this->assertNotNull($payment);
+        $this->assertSame('57.50', (string) $payment->gross_amount);
+        $this->assertSame('57.50', (string) $payment->customer_total);
+        $this->assertSame('50.00', (string) $payment->base_amount);
+        $this->assertSame('7.50', (string) $payment->client_service_fee);
+        $this->assertSame('15.00', (string) $payment->client_service_fee_percent);
     }
 
     private function availableProfessional(): ProfessionalProfile
